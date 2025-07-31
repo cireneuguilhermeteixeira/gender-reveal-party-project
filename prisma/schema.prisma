@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -14,6 +14,7 @@ model User {
   team          String?
   createdAt     DateTime @default(now())
   UserAnswer    UserAnswer[]
+  Score         Score[]
 }
 
 model Session {
@@ -23,12 +24,15 @@ model Session {
   status               SessionStatus  @default(WAITING)
   createdAt            DateTime       @default(now())
   UserAnswer           UserAnswer[]
+  Score                Score[]
 }
 
 model Score {
   id        String @id @default(uuid())
   userId    String
+  user      User    @relation(fields: [userId], references: [id])
   sessionId String
+  session   Session @relation(fields: [sessionId], references: [id])
   points    Int
   phase     Phase
 }
