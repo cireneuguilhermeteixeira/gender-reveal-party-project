@@ -30,6 +30,15 @@ model Score {
   phase     Phase
 }
 
+model QrClue {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  clue      String
+  points    Int      @default(0)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+}
+
 enum Phase {
   QUIZ
   JOGO
