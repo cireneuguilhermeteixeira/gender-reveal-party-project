@@ -22,6 +22,14 @@ model Session {
   createdAt            DateTime       @default(now())
 }
 
+model Score {
+  id        String @id @default(uuid())
+  userId    String
+  sessionId String
+  points    Int
+  phase     Phase
+}
+
 enum Phase {
   QUIZ
   JOGO
