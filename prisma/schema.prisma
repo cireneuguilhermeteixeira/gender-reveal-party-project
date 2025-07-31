@@ -10,6 +10,7 @@ datasource db {
 model User {
   id        String   @id @default(uuid())
   name      String
+  pregnancyWord String? @unique
   team      String?
   createdAt DateTime @default(now())
 }
