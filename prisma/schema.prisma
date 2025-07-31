@@ -8,10 +8,12 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  team      String?
-  createdAt DateTime @default(now())
+  id            String   @id @default(uuid())
+  name          String
+  pregnancyWord String? @unique
+  team          String?
+  createdAt     DateTime @default(now())
+  UserAnswer    UserAnswer[]
 }
 
 model Session {
@@ -20,6 +22,7 @@ model Session {
   currentQuestionIndex Int
   status               SessionStatus  @default(WAITING)
   createdAt            DateTime       @default(now())
+  UserAnswer           UserAnswer[]
 }
 
 model Score {
@@ -36,6 +39,7 @@ model Question {
   options      Json
   correctIndex Int
   timeLimit    Int
+  UserAnswer UserAnswer[]
 }
 
 model UserAnswer {
@@ -50,6 +54,16 @@ model UserAnswer {
   timeTaken     Int
   isCorrect     Boolean
   createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+}
+model QrClue {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  clue      String
+  points    Int      @default(0)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum Phase {
