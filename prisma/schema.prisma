@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  team      String?
+  createdAt DateTime @default(now())
+}
+
+model Session {
+  id                   String         @id @default(uuid())
+  phase                Phase          @default(QUIZ)
+  currentQuestionIndex Int
+  status               SessionStatus  @default(WAITING)
+  createdAt            DateTime       @default(now())
+}
+
+enum Phase {
+  QUIZ
+  JOGO
+  QR
+  FINAL
+}
+
+enum SessionStatus {
+  WAITING
+  IN_PROGRESS
+  FINISHED
+}
+
