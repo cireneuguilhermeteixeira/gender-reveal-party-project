@@ -1,6 +1,8 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
+import { io, type Socket } from 'socket.io-client'
+import { useSearchParams } from 'next/navigation'
 
 interface Question {
   question: string
@@ -44,6 +46,27 @@ export default function Fase1() {
   const [score, setScore] = useState(0)
   const [answered, setAnswered] = useState(false)
   const [answerTime, setAnswerTime] = useState<number | null>(null)
+  const [ranking, setRanking] = useState<{ name: string; points: number }[]>([])
+  const [socket, setSocket] = useState<Socket | null>(null)
+  const params = useSearchParams()
+  const isHost = params.get('host') === '1'
+  const name =
+    typeof window !== 'undefined' ? localStorage.getItem('quiz-name') || '' : ''
+
+  useEffect(() => {
+    const s = io({ path: '/api/socket/io' })
+    setSocket(s)
+    s.on('question', (data: { index: number; time: number }) => {
+      setIndex(data.index)
+      setTime(data.time)
+    })
+    s.on('ranking', (data: { name: string; points: number }[]) => {
+      setRanking(data)
+    })
+    return () => {
+      s.disconnect()
+    }
+  }, [])
 
   const handleAnswer = useCallback((option: number) => {
     if (answered) return
@@ -53,7 +76,14 @@ export default function Fase1() {
     if (option === QUESTIONS[index].correct) {
       setScore(s => s + time)
     }
-  }, [answered, index, time])
+    socket?.emit('answer', {
+      userId: name,
+      sessionId: 'default',
+      questionId: String(index),
+      selectedIndex: option,
+      timeTaken: elapsed,
+    })
+  }, [answered, index, time, socket, name])
 
   useEffect(() => {
     if (answered) return
@@ -62,14 +92,20 @@ export default function Fase1() {
       return
     }
     const id = setTimeout(() => setTime(t => t - 1), 1000)
+    if (isHost && socket) {
+      socket.emit('timer', time)
+    }
     return () => clearTimeout(id)
-  }, [time, answered, handleAnswer])
+  }, [time, answered, handleAnswer, isHost, socket])
 
   useEffect(() => {
     setTime(TIME)
     setAnswered(false)
     setAnswerTime(null)
-  }, [index])
+    if (isHost && socket) {
+      socket.emit('question', { index, time: TIME })
+    }
+  }, [index, isHost, socket])
 
 
   function next() {
@@ -115,6 +151,15 @@ export default function Fase1() {
           <p>Você tem {score} pontos</p>
           {answerTime !== null && (
             <p>Tempo de resposta: {answerTime}s</p>
+          )}
+          {ranking.length > 0 && (
+            <ul className="mt-2 text-left">
+              {ranking.map(r => (
+                <li key={r.name}>
+                  {r.name}: {r.points}
+                </li>
+              ))}
+            </ul>
           )}
           <button
             onClick={next}
