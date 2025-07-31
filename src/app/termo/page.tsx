@@ -1,13 +1,16 @@
 'use client'
 
 import { useState } from 'react'
+import { stripAccents } from '@/lib/utils'
 
 const WORD = 'parto'
+const NORMALIZED_WORD = stripAccents(WORD)
 const MAX_ATTEMPTS = 5
 
 function getLetterColor(letter: string, index: number) {
-  if (letter === WORD[index]) return 'bg-green-500'
-  if (WORD.includes(letter)) return 'bg-yellow-500'
+  const normalizedLetter = stripAccents(letter)
+  if (normalizedLetter === NORMALIZED_WORD[index]) return 'bg-green-500'
+  if (NORMALIZED_WORD.includes(normalizedLetter)) return 'bg-yellow-500'
   return 'bg-gray-500'
 }
 
@@ -22,7 +25,7 @@ export default function TermoPage() {
     const g = guess.toLowerCase()
     setAttempts([...attempts, g])
     setGuess('')
-    if (g === WORD) setWon(true)
+    if (stripAccents(g) === NORMALIZED_WORD) setWon(true)
   }
 
   const disabled = won || attempts.length >= MAX_ATTEMPTS
