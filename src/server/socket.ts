@@ -54,7 +54,7 @@ export function initSocket(server: HTTPServer) {
           })
           io.emit(
             'ranking',
-            scores.map(s => ({ name: s.user.name, points: s.points }))
+            scores.map((s: { user: { name: string }, points: string}) => ({ name: s.user.name, points: s.points }))
           )
         }
       )

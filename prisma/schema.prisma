@@ -8,42 +8,33 @@ datasource db {
 }
 
 model User {
-  id            String   @id @default(uuid())
+  id            String       @id @default(uuid())
   name          String
-  pregnancyWord String? @unique
-  team          String?
-  createdAt     DateTime @default(now())
   UserAnswer    UserAnswer[]
-  Score         Score[]
+  sessionId     String
+  session       Session      @relation(fields: [sessionId], references: [id])
+  points        Int          @default(0)
+  createdAt     DateTime     @default(now())
 }
 
 model Session {
   id                   String         @id @default(uuid())
-  phase                Phase          @default(QUIZ)
+  phase                Phase          @default(QUIZ_1_PREPARING)
   currentQuestionIndex Int
-  status               SessionStatus  @default(WAITING)
-  createdAt            DateTime       @default(now())
+  User                 User[]
   UserAnswer           UserAnswer[]
-  Score                Score[]
+  createdAt            DateTime       @default(now())
 }
 
-model Score {
-  id        String @id @default(uuid())
-  userId    String
-  user      User    @relation(fields: [userId], references: [id])
-  sessionId String
-  session   Session @relation(fields: [sessionId], references: [id])
-  points    Int
-  phase     Phase
-}
 
 model Question {
-  id           String @id @default(uuid())
+  id           String         @id @default(uuid())
   text         String
   options      Json
   correctIndex Int
-  timeLimit    Int
-  UserAnswer UserAnswer[]
+  timeLimit    Int            @default(15) // in seconds
+  UserAnswer   UserAnswer[]
+  createdAt    DateTime       @default(now())
 }
 
 model UserAnswer {
@@ -60,26 +51,44 @@ model UserAnswer {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 }
-model QrClue {
-  id        String   @id @default(uuid())
-  token     String   @unique
-  clue      String
-  points    Int      @default(0)
-  used      Boolean  @default(false)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
+
 
 enum Phase {
-  QUIZ
-  JOGO
-  QR
+  // The game is waiting for players to join
+  WAITING_FOR_PLAYERS
+  // The game is in the quiz phase # 1
+  QUIZ_1_PREPARING
+  QUIZ_1_ANSWERING
+  QUIZ_1_RESULTS
+  // The game is in the quiz phase # 2
+  QUIZ_2_PREPARING
+  QUIZ_2_ANSWERING
+  QUIZ_2_RESULTS
+  // The game is in the quiz phase # 3
+  QUIZ_3_PREPARING
+  QUIZ_3_ANSWERING
+  QUIZ_3_RESULTS
+  // The game is in the quiz phase # 4
+  QUIZ_4_PREPARING
+  QUIZ_4_ANSWERING
+  QUIZ_4_RESULTS
+  // The game is in the quiz phase # 5
+  QUIZ_5_PREPARING
+  QUIZ_5_ANSWERING
+  QUIZ_5_RESULTS
+  // ----------------------------------
+  // The game is in the termo phase # 
+  TERMO_PREPARING
+  // First world
+  TERMO_1_ANSWERING
+  TERMO_1_RESULTS
+  // Second world
+  TERMO_2_ANSWERING
+  TERMO_2_RESULTS
+  // Third world
+  TERMO_3_ANSWERING
+  TERMO_3_RESULTS
+  // The game is in the final phase
   FINAL
-}
-
-enum SessionStatus {
-  WAITING
-  IN_PROGRESS
-  FINISHED
 }
 
