@@ -3,28 +3,43 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  const questions = [
-    {
-      text: 'What color is the sky?',
-      options: ['Blue', 'Green', 'Red', 'Yellow'],
-      answer: 'Blue',
-      timeLimit: 30,
-    },
-    {
-      text: 'Which animal barks?',
-      options: ['Cat', 'Dog', 'Cow', 'Fish'],
-      answer: 'Dog',
-      timeLimit: 30,
-    },
-  ]
+  // limpar dados antigos (opcional)
+  await prisma.question.deleteMany()
 
-  for (const question of questions) {
-    await prisma.question.upsert({
-      where: { text: question.text },
-      update: {},
-      create: question,
-    })
-  }
+  await prisma.question.createMany({
+    data: [
+      {
+        text: "Qual é a capital da França?",
+        options: JSON.stringify(["Londres", "Paris", "Roma", "Berlim"]),
+        correctIndex: 1,
+        timeLimit: 15,
+      },
+      {
+        text: "Quanto é 7 x 8?",
+        options: JSON.stringify(["54", "56", "64", "72"]),
+        correctIndex: 1,
+        timeLimit: 10,
+      },
+      {
+        text: "Quem escreveu 'Dom Quixote'?",
+        options: JSON.stringify([
+          "Machado de Assis",
+          "Miguel de Cervantes",
+          "José Saramago",
+          "Eça de Queirós",
+        ]),
+        correctIndex: 1,
+        timeLimit: 20,
+      },
+      {
+        text: "Em que ano o homem pisou na Lua pela primeira vez?",
+        options: JSON.stringify(["1965", "1969", "1971", "1973"]),
+        correctIndex: 1,
+        timeLimit: 20,
+      },
+    ],
+  })
+
 }
 
 main()

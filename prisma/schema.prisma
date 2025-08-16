@@ -20,7 +20,8 @@ model User {
 model Session {
   id                   String         @id @default(uuid())
   phase                Phase          @default(QUIZ_1_PREPARING)
-  currentQuestionIndex Int
+  currentQuestionIndex String         @default("0")
+  currentQuestion      Question       @relation(fields: [currentQuestionIndex], references: [id])
   User                 User[]
   UserAnswer           UserAnswer[]
   createdAt            DateTime       @default(now())
@@ -35,6 +36,7 @@ model Question {
   timeLimit    Int            @default(15) // in seconds
   UserAnswer   UserAnswer[]
   createdAt    DateTime       @default(now())
+  Session      Session[]
 }
 
 model UserAnswer {
