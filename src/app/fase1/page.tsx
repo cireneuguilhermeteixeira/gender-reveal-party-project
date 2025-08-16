@@ -1,7 +1,7 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import Link from 'next/link'
-import { io, type Socket } from 'socket.io-client'
+// import { io, type Socket } from 'socket.io-client'
 import { useSearchParams } from 'next/navigation'
 
 interface Question {
@@ -46,27 +46,27 @@ export default function Fase1() {
   const [score, setScore] = useState(0)
   const [answered, setAnswered] = useState(false)
   const [answerTime, setAnswerTime] = useState<number | null>(null)
-  const [ranking, setRanking] = useState<{ name: string; points: number }[]>([])
-  const [socket, setSocket] = useState<Socket | null>(null)
+  const [ranking] = useState<{ name: string; points: number }[]>([])
+  // const [socket, setSocket] = useState<Socket | null>(null)
   const params = useSearchParams()
-  const isHost = params.get('host') === '1'
-  const name =
-    typeof window !== 'undefined' ? localStorage.getItem('quiz-name') || '' : ''
+  const isHost = params?.get('host') === '1'
+  // const name =
+  //   typeof window !== 'undefined' ? localStorage.getItem('quiz-name') || '' : ''
 
-  useEffect(() => {
-    const s = io({ path: '/api/socket/io' })
-    setSocket(s)
-    s.on('question', (data: { index: number; time: number }) => {
-      setIndex(data.index)
-      setTime(data.time)
-    })
-    s.on('ranking', (data: { name: string; points: number }[]) => {
-      setRanking(data)
-    })
-    return () => {
-      s.disconnect()
-    }
-  }, [])
+  // useEffect(() => {
+  //   const s = io({ path: '/api/socket/io' })
+  //   setSocket(s)
+  //   s.on('question', (data: { index: number; time: number }) => {
+  //     setIndex(data.index)
+  //     setTime(data.time)
+  //   })
+  //   s.on('ranking', (data: { name: string; points: number }[]) => {
+  //     setRanking(data)
+  //   })
+  //   return () => {
+  //     s.disconnect()
+  //   }
+  // }, [])
 
   const handleAnswer = useCallback((option: number) => {
     if (answered) return
@@ -76,14 +76,14 @@ export default function Fase1() {
     if (option === QUESTIONS[index].correct) {
       setScore(s => s + time)
     }
-    socket?.emit('answer', {
-      userId: name,
-      sessionId: 'default',
-      questionId: String(index),
-      selectedIndex: option,
-      timeTaken: elapsed,
-    })
-  }, [answered, index, time, socket, name])
+    // socket?.emit('answer', {
+    //   userId: name,
+    //   sessionId: 'default',
+    //   questionId: String(index),
+    //   selectedIndex: option,
+    //   timeTaken: elapsed,
+    // })
+  }, [answered, index, time])
 
   useEffect(() => {
     if (answered) return
@@ -92,20 +92,20 @@ export default function Fase1() {
       return
     }
     const id = setTimeout(() => setTime(t => t - 1), 1000)
-    if (isHost && socket) {
-      socket.emit('timer', time)
-    }
+    // if (isHost && socket) {
+    //   socket.emit('timer', time)
+    // }
     return () => clearTimeout(id)
-  }, [time, answered, handleAnswer, isHost, socket])
+  }, [time, answered, handleAnswer, isHost])
 
   useEffect(() => {
     setTime(TIME)
     setAnswered(false)
     setAnswerTime(null)
-    if (isHost && socket) {
-      socket.emit('question', { index, time: TIME })
-    }
-  }, [index, isHost, socket])
+    // if (isHost && socket) {
+    //   socket.emit('question', { index, time: TIME })
+    // }
+  }, [index, isHost])
 
 
   function next() {

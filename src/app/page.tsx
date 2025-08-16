@@ -1,37 +1,37 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { io, type Socket } from 'socket.io-client'
+// import { io, type Socket } from 'socket.io-client'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 export default function Home() {
   const [name, setName] = useState('')
   const [players, setPlayers] = useState<string[]>([])
   const [joined, setJoined] = useState(false)
-  const [socket, setSocket] = useState<Socket | null>(null)
+  // const [socket, setSocket] = useState<Socket | null>(null)
   const [isHost, setIsHost] = useState(false)
   const router = useRouter()
   const params = useSearchParams()
 
-  useEffect(() => {
-    const s = io({ path: '/api/socket/io' })
-    setSocket(s)
-    s.on('user-joined', (n: string) =>
-      setPlayers(p => (p.includes(n) ? p : [...p, n]))
-    )
-    s.on('start-quiz', () => router.push('/fase1'))
-    return () => {
-      s.disconnect()
-    }
-  }, [router])
+  // useEffect(() => {
+  //   const s = io({ path: '/api/socket/io' })
+  //   setSocket(s)
+  //   s.on('user-joined', (n: string) =>
+  //     setPlayers(p => (p.includes(n) ? p : [...p, n]))
+  //   )
+  //   s.on('start-quiz', () => router.push('/fase1'))
+  //   return () => {
+  //     s.disconnect()
+  //   }
+  // }, [router])
 
   useEffect(() => {
-    setIsHost(params.get('host') === '1')
+    setIsHost(params?.get('host') === '1')
   }, [params])
 
   function join() {
-    if (!socket || !name) return
-    socket.emit('join', name)
+    // if (!socket || !name) return
+    // socket.emit('join', name)
     setPlayers(p => [...p, name])
     if (typeof window !== 'undefined') {
       localStorage.setItem('quiz-name', name)
@@ -40,7 +40,8 @@ export default function Home() {
   }
 
   function start() {
-    socket?.emit('start-quiz')
+    // socket?.emit('start-quiz')
+    router.push('/fase1')
   }
 
   return (
