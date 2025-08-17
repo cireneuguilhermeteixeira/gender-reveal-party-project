@@ -19,8 +19,9 @@ model User {
 
 model Session {
   id                   String         @id @default(uuid())
-  phase                Phase          @default(QUIZ_1_PREPARING)
   currentQuestionIndex String         @default("0")
+  questions            Json
+  phase                Phase          @default(WAITING_FOR_PLAYERS)
   currentQuestion      Question       @relation(fields: [currentQuestionIndex], references: [id])
   User                 User[]
   UserAnswer           UserAnswer[]
@@ -78,6 +79,26 @@ enum Phase {
   QUIZ_5_PREPARING
   QUIZ_5_ANSWERING
   QUIZ_5_RESULTS
+  // The game is in the quiz phase # 6
+  QUIZ_6_PREPARING
+  QUIZ_6_ANSWERING
+  QUIZ_6_RESULTS
+  // The game is in the quiz phase # 7
+  QUIZ_7_PREPARING
+  QUIZ_7_ANSWERING
+  QUIZ_7_RESULTS
+  // The game is in the quiz phase # 8
+  QUIZ_8_PREPARING
+  QUIZ_8_ANSWERING
+  QUIZ_8_RESULTS
+  // The game is in the quiz phase # 9
+  QUIZ_9_PREPARING
+  QUIZ_9_ANSWERING
+  QUIZ_9_RESULTS
+  // The game is in the quiz phase # 10
+  QUIZ_10_PREPARING
+  QUIZ_10_ANSWERING
+  QUIZ_10_RESULTS
   // ----------------------------------
   // The game is in the termo phase # 
   TERMO_PREPARING

@@ -37,6 +37,52 @@ async function main() {
         correctIndex: 1,
         timeLimit: 20,
       },
+      {
+        text: "Qual é o maior planeta do Sistema Solar?",
+        options: JSON.stringify(["Terra", "Saturno", "Júpiter", "Netuno"]),
+        correctIndex: 2, // Júpiter
+        timeLimit: 15,
+      },
+      {
+        text: "Quem pintou a Mona Lisa?",
+        options: JSON.stringify([
+          "Michelangelo",
+          "Leonardo da Vinci",
+          "Van Gogh",
+          "Pablo Picasso",
+        ]),
+        correctIndex: 1, // Leonardo da Vinci
+        timeLimit: 15,
+      },
+      {
+        text: "Qual é o elemento químico representado pela letra 'O'?",
+        options: JSON.stringify(["Ouro", "Oxigênio", "Ósmio", "Ozônio"]),
+        correctIndex: 1, // Oxigênio
+        timeLimit: 10,
+      },
+      {
+        text: "Em que continente fica o Egito?",
+        options: JSON.stringify(["África", "Ásia", "Europa", "América"]),
+        correctIndex: 0, // África
+        timeLimit: 10,
+      },
+      {
+        text: "Quem foi o primeiro presidente do Brasil?",
+        options: JSON.stringify([
+          "Getúlio Vargas",
+          "Deodoro da Fonseca",
+          "Floriano Peixoto",
+          "Dom Pedro II",
+        ]),
+        correctIndex: 1, // Deodoro da Fonseca
+        timeLimit: 20,
+      },
+      {
+        text: "Qual é a moeda oficial do Japão?",
+        options: JSON.stringify(["Yen", "Won", "Dólar", "Peso"]),
+        correctIndex: 0, // Yen
+        timeLimit: 15,
+      },
     ],
   })
 

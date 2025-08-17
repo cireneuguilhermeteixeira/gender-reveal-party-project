@@ -16,7 +16,7 @@ export default function Home() {
 
   const sessionLink = useMemo(() => {
     if (!sessionId) return ''
-    return `${origin}/player_session/${sessionId}/quiz`
+    return `${origin}/player_session/${sessionId}`
   }, [sessionId, origin])
 
 
@@ -27,7 +27,7 @@ export default function Home() {
       const newSessionData : Session = await http.post<Session>('/api/session', {})
 
       setSessionId(newSessionData.id);
-      // router.push(`/player_session/${data.id}/quiz`)
+      // router.push(`/player_session/${data.id}`)
     } catch (e) {
       console.error(e)
       alert('Não foi possível criar a sessão. Tente novamente.')
@@ -86,7 +86,7 @@ export default function Home() {
 
             <div className="flex flex-wrap items-center gap-2">
               <button
-                onClick={() => router.push(`/player_session/${sessionId}/quiz`)}
+                onClick={() => router.push(`/player_session/${sessionId}`)}
                 className="bg-indigo-600 text-white px-3 py-2 rounded"
               >
                 Iniciar Jogo

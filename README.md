@@ -54,6 +54,7 @@ GRANT ALL PRIVILEGES ON DATABASE gender_reveal TO gender_reveal_user;
 ALTER ROLE gender_reveal_user CREATEDB;
 \q
 
+npx prisma migrate dev -n initial_database
 npx prisma db seed
 
 ```
