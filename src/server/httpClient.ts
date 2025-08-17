@@ -49,4 +49,4 @@ export class HttpClient {
   }
 }
 
-export const http = new HttpClient()
+export const http = new HttpClient('/api')

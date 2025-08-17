@@ -73,7 +73,7 @@ export default function Fase1() {
     const elapsed = TIME - time
     setAnswered(true)
     setAnswerTime(elapsed)
-    if (option === QUESTIONS[index].correct) {
+    if (QUESTIONS[index] && option === QUESTIONS[index]?.correct) {
       setScore(s => s + time)
     }
     // socket?.emit('answer', {

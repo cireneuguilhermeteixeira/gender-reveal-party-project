@@ -1,18 +1,23 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 // import { io, type Socket } from 'socket.io-client'
-import { useRouter, useSearchParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
+import { http } from '@/server/httpClient'
+import { User } from '@prisma/client'
+
 
 export default function InitialPlayerPage() {
-  const [name, setName] = useState('')
-  const [players, setPlayers] = useState<string[]>([])
-  const [joined, setJoined] = useState(false)
+  const [name, setName] = useState('');
+  const [players, setPlayers] = useState<string[]>([]);
+  const [, setPlayerSigned] = useState<User| null>(null);
+  const [joined, setJoined] = useState(false);
   // const [socket, setSocket] = useState<Socket | null>(null)
-  const [isHost, setIsHost] = useState(false)
-  const router = useRouter()
-  const params = useSearchParams()
+  const router = useRouter();
+  const { session_id: sessionId } = useParams<{ session_id: string }>()
 
+  
+  
   // useEffect(() => {
   //   const s = io({ path: '/api/socket/io' })
   //   setSocket(s)
@@ -25,13 +30,17 @@ export default function InitialPlayerPage() {
   //   }
   // }, [router])
 
-  useEffect(() => {
-    setIsHost(params?.get('host') === '1')
-  }, [params])
 
-  function join() {
-    // if (!socket || !name) return
-    // socket.emit('join', name)
+
+  const join = async () => {
+
+    const userResponse = await http.post<User>('/user', {
+      name,
+      sessionId,
+    });
+    setPlayerSigned(userResponse);
+
+    localStorage.setItem("user_id", userResponse.id);
     setPlayers(p => [...p, name])
     if (typeof window !== 'undefined') {
       localStorage.setItem('quiz-name', name)
@@ -43,6 +52,8 @@ export default function InitialPlayerPage() {
     // socket?.emit('start-quiz')
     router.push('/quiz')
   }
+
+
 
   return (
     <main className="min-h-screen flex flex-col items-center justify-center gap-6 p-8 text-center">
@@ -69,14 +80,7 @@ export default function InitialPlayerPage() {
               <li key={p}>{p}</li>
             ))}
           </ul>
-          {isHost && (
-            <button
-              onClick={start}
-              className="bg-green-600 text-white px-4 py-2 rounded"
-            >
-              Começar Quiz
-            </button>
-          )}
+        
         </>
       )}
     </main>
