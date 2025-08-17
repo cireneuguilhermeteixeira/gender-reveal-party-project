@@ -4,15 +4,17 @@ import prisma from '@/lib/prisma'
 export async function POST() {
 
   const firstQuestion = await prisma.question.findFirst();
+
   if (!firstQuestion) {
     return NextResponse.json({ error: 'No questions available' }, { status: 404 });
   }
-  const score = prisma.session.create({
+  const session = await prisma.session.create({
     data: {
       currentQuestionIndex: firstQuestion.id,
     }
   });
-  return NextResponse.json({ score })
+
+  return NextResponse.json(session)
 }
 
 

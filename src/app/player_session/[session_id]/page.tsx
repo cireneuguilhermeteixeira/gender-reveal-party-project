@@ -19,7 +19,7 @@ export default function InitialPlayerPage() {
   //   s.on('user-joined', (n: string) =>
   //     setPlayers(p => (p.includes(n) ? p : [...p, n]))
   //   )
-  //   s.on('start-quiz', () => router.push('/fase1'))
+  //   s.on('start-quiz', () => router.push('/quiz'))
   //   return () => {
   //     s.disconnect()
   //   }
@@ -41,7 +41,7 @@ export default function InitialPlayerPage() {
 
   function start() {
     // socket?.emit('start-quiz')
-    router.push('/fase1')
+    router.push('/quiz')
   }
 
   return (
