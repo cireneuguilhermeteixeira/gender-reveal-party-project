@@ -48,11 +48,12 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/bui
 
 ```bash
 sudo -u postgres psql
-
 CREATE DATABASE gender_reveal;
 CREATE USER gender_reveal_user WITH PASSWORD 'pass';
 GRANT ALL PRIVILEGES ON DATABASE gender_reveal TO gender_reveal_user;
 ALTER ROLE gender_reveal_user CREATEDB;
+\q
 
+npx prisma db seed
 
 ```
