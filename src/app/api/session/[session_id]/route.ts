@@ -14,7 +14,7 @@ export async function GET(_: unknown, { params }: Params) {
 
   const session = await prisma.session.findUnique({
     where: { id: session_id },
-    include: { User: true, UserAnswer: true },
+    include: { User: true, UserAnswer: true, currentQuestion: true },
   });
 
   return NextResponse.json(session);
@@ -30,7 +30,11 @@ export async function PUT(req: NextRequest, { params }: Params) {
 
   const body = await req.json();
   const { phase, currentQuestionIndex, questions } : { phase : Phase, currentQuestionIndex: string, questions: Question } = body;
- 
+  
+  if (!phase || !currentQuestionIndex || !questions) {
+    return NextResponse.json({ error: 'Some fields are missing' }, { status: 400 })
+  }
+
 
   try {
     const updated = await prisma.session.update({

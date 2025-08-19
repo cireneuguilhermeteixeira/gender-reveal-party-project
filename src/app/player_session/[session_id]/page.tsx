@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 // import { io, type Socket } from 'socket.io-client'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams } from 'next/navigation'
 import { http } from '@/server/httpClient'
 import { User } from '@prisma/client'
 
@@ -13,7 +13,7 @@ export default function InitialPlayerPage() {
   const [, setPlayerSigned] = useState<User| null>(null);
   const [joined, setJoined] = useState(false);
   // const [socket, setSocket] = useState<Socket | null>(null)
-  const router = useRouter();
+  // const router = useRouter();
   const { session_id: sessionId } = useParams<{ session_id: string }>()
 
   
@@ -48,10 +48,10 @@ export default function InitialPlayerPage() {
     setJoined(true)
   }
 
-  function start() {
-    // socket?.emit('start-quiz')
-    router.push('/quiz')
-  }
+  // function start() {
+  //   // socket?.emit('start-quiz')
+  //   router.push('/quiz')
+  // }
 
 
 
