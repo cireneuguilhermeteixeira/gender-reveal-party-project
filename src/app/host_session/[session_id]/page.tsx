@@ -1,170 +1,284 @@
-'use client'
+'use client';
 
-import { useEffect, useMemo, useState, useCallback } from 'react';
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { User, Prisma } from '@prisma/client';
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation';
 import { http } from '@/server/httpClient';
 import { getNextPhase, isQuizPreparing, isQuizAnswering, isQuizResults } from '@/lib/sessionPhase';
 
 type SessionWithUsers = Prisma.SessionGetPayload<{
-  include: { User: true; UserAnswer: true, currentQuestion: true }
-}>
+  include: { User: true; UserAnswer: true; currentQuestion: true }
+}>;
 
+type QuestionOptions = string[];
 
+// ---- helpers ---------------------------------------------------------------
+
+function parseOptions(options: Prisma.JsonValue | null | undefined): QuestionOptions {
+  if (typeof options === 'string') {
+    try {
+      const parsed = JSON.parse(options);
+      return Array.isArray(parsed) ? parsed.filter((o: unknown): o is string => typeof o === 'string') : [];
+    } catch {
+      return [];
+    }
+  }
+  if (Array.isArray(options)) {
+    return options.filter((o: unknown): o is string => typeof o === 'string');
+  }
+  return [];
+}
+
+// ----------------------------------------------------------------------------
 
 export default function HostHome() {
-  const [session, setSession] = useState<SessionWithUsers | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [ users, setUsers ] = useState<User[]>([]);
   const { session_id: sessionId } = useParams<{ session_id: string }>();
   const router = useRouter();
-  const options: string[] = JSON.parse((session?.currentQuestion?.options as string) ?? "[]");
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
+  const [session, setSession] = useState<SessionWithUsers | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [options, setOptions] = useState<QuestionOptions>([]);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+  const advancingRef = useRef(false); // evita requisições duplicadas
+
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
 
   const sessionLink = useMemo(() => {
-    if (!sessionId) return ''
-    return `${origin}/player_session/${sessionId}`
-  }, [sessionId, origin])
-
-
-
+    if (!sessionId) return '';
+    return `${origin}/player_session/${sessionId}`;
+  }, [sessionId, origin]);
 
   const copyToClipboard = async () => {
-    if (!sessionLink) return
+    if (!sessionLink) return;
     try {
-      await navigator.clipboard.writeText(sessionLink)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+      await navigator.clipboard.writeText(sessionLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
     } catch {
-      alert('Falha ao copiar.')
+      setErr('Falha ao copiar o link da sessão.');
     }
-  }
+  };
 
+  const applySession = useCallback((s: SessionWithUsers) => {
+    setSession(s);
+    setUsers(s.User ?? []);
+    setOptions(parseOptions(s.currentQuestion?.options));
+  }, []);
 
   const fetchSession = useCallback(async () => {
-    const sessionResponse = await http.get<SessionWithUsers>(`/session/${sessionId}`);
-    setSession(sessionResponse);
-    setUsers(sessionResponse.User);
-  }, [sessionId]);
-
-  const goToNextPhase = async () => {
-    if (!sessionId || !session) return;
-
-    if (session.phase === "TERMO_PREPARING") {
-      router.push(`/host_session/${sessionId}/termo`);
-      return;
+    if (!sessionId) return;
+    try {
+      setLoading(true);
+      setErr(null);
+      const s = await http.get<SessionWithUsers>(`/session/${sessionId}`);
+      applySession(s);
+    } catch (e) {
+      setErr('Não foi possível carregar a sessão.');
+    } finally {
+      setLoading(false);
     }
-    const nextPhase = getNextPhase(session);
-    const sessionUpdate = await http.put<SessionWithUsers>(`/session/${sessionId}`, {
-      phase: nextPhase.phase,
-      currentQuestionIndex: nextPhase?.currentQuestionIndex,
-      questions: nextPhase?.questions
-    });
+  }, [sessionId, applySession]);
 
-    setSession(sessionUpdate);
-  }
+  const goToNextPhase = useCallback(async () => {
+    if (!sessionId || !session) return;
+    if (advancingRef.current) return;      // trava contra toques rápidos
+    advancingRef.current = true;
+
+    try {
+      // rota para TERMO
+      if (session.phase === 'TERMO_PREPARING') {
+        router.push(`/host_session/${sessionId}/termo`);
+        return;
+      }
+
+      const nextPhase = getNextPhase(session);
+      const payload = {
+        phase: nextPhase.phase,
+        currentQuestionIndex: nextPhase?.currentQuestionIndex,
+        questions: nextPhase?.questions
+      };
+
+      const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload);
+      applySession(updated);
+    } catch {
+      setErr('Falha ao avançar de fase. Tente novamente.');
+    } finally {
+      advancingRef.current = false;
+    }
+  }, [sessionId, session, router, applySession]);
 
   useEffect(() => {
     fetchSession();
   }, [fetchSession]);
 
-
-  const showQuizStatus = () => {
+  const quizStatus = useMemo(() => {
     if (!session) return 'Carregando...';
+    if (isQuizPreparing(session.phase)) return null;
+    if (isQuizAnswering(session.phase)) {
+      return `Tempo: ${session.currentQuestion?.timeLimit ?? 0} s`;
+    }
+    if (isQuizResults(session.phase)) {
+      const idx = session.currentQuestion?.correctIndex ?? -1;
+      const ans = idx >= 0 ? options[idx] : undefined;
+      return ans ? `Resposta: ${ans}` : 'Resposta não definida';
+    }
+    return null;
+  }, [session, options]);
 
-    if (isQuizPreparing(session?.phase)) {
-      return null;
-    }
-    if (isQuizAnswering(session?.phase)) {
-      return `TEMPO: ${session.currentQuestion?.timeLimit || 0} segundos`;
-    }
-    if (isQuizResults(session?.phase)) {
-      return `Resposta: ${options[session.currentQuestion?.correctIndex]}`;
-    }
-}
-
+  // ---- UI ------------------------------------------------------------------
 
   return (
-    <main className="min-h-screen flex flex-col items-center justify-center gap-6 p-8 text-center">
-      <h1 className="text-3xl font-bold">Bem-vindo ao Jogo de Chá Revelação</h1>
+    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
+      <div className="w-full max-w-3xl space-y-6">
+        {/* Header */}
+        <header className="flex items-center justify-between">
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
+            Painel do Host — Jogo de Chá Revelação
+          </h1>
+          {!!sessionId && (
+            <button
+              onClick={copyToClipboard}
+              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-2 text-sm font-medium transition"
+              title="Copiar link da sessão para os jogadores"
+            >
+              {copied ? 'Link copiado!' : 'Copiar link da sessão'}
+            </button>
+          )}
+        </header>
 
-      {sessionId && (
-        <section className="w-full max-w-xl mt-6 p-4 border rounded-lg text-left">
-
-         {session?.phase === "WAITING_FOR_PLAYERS" ? <>
-            <h2 className="text-xl font-semibold mb-3">Sessão criada ✅</h2>
-
-            <div className="space-y-3">
-              <div>
-                <p className="text-sm text-gray-600 mb-1">Link da sessão</p>
-                <div className="flex items-center gap-2">
-                  <input
-                    readOnly
-                    value={sessionLink}
-                    className="flex-1 border rounded px-2 py-2 text-sm"
-                  />
-                  <button
-                    onClick={copyToClipboard}
-                    className="bg-slate-600 text-white px-3 py-2 rounded"
-                  >
-                    {copied ? 'Copiado!' : 'Copiar'}
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={goToNextPhase}
-                  className="bg-indigo-600 text-white px-3 py-2 rounded"
-                >
-                  Iniciar Jogo
-                </button>
-              </div>
-            </div>
-          </>
-           : <div>
-              <h1>{session?.currentQuestion?.text}</h1>
-              {options.map((option, i) => (
-                <div key={i} className="p-2 border rounded mb-2">
-                  <p className="font-bold"> {`${i + 1})`} {option}</p>
-                </div>
-              ))}
-              <p>
-                {showQuizStatus()}
-              </p>
-
-               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={goToNextPhase}
-                  className="bg-indigo-600 text-white px-3 py-2 rounded"
-                >
-                  Avançar para próxima fase
-                </button>
-              </div>
-            </div>}
-
-  
-          <div className="p-4 border rounded max-w-md mx-auto text-center">
-            <h2 className="text-xl font-bold mb-4">Jogadores na sessão</h2>
-            {users.length === 0 ? (
-              <p>Nenhum jogador entrou ainda...</p>
-            ) : (
-              <ul className="space-y-2">
-                {users.map(user => (
-                  <li
-                    key={user.id}
-                    className="bg-gray-100 dark:bg-gray-800 px-4 py-2 rounded"
-                  >
-                    {user.name}
-                  </li>
-                ))}
-              </ul>
-            )}
+        {/* Alert */}
+        {err && (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm">
+            {err}
           </div>
+        )}
 
+        {/* Card principal */}
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60 shadow-xl">
+          {loading ? (
+            <div className="p-8 animate-pulse">
+              <div className="h-6 w-2/3 bg-neutral-800 rounded mb-4"></div>
+              <div className="space-y-2">
+                <div className="h-10 bg-neutral-800 rounded"></div>
+                <div className="h-10 bg-neutral-800 rounded"></div>
+                <div className="h-10 bg-neutral-800 rounded"></div>
+                <div className="h-10 bg-neutral-800 rounded"></div>
+              </div>
+              <div className="h-4 w-1/3 bg-neutral-800 rounded mt-6"></div>
+            </div>
+          ) : !session ? (
+            <div className="p-8">Sessão não encontrada.</div>
+          ) : (
+            <div className="p-6 md:p-8">
+              {session.phase === 'WAITING_FOR_PLAYERS' ? (
+                <>
+                  <h2 className="text-xl font-semibold mb-2">Sessão criada ✅</h2>
+                  <p className="text-sm text-neutral-300 mb-4">
+                    Compartilhe o link com os participantes para eles entrarem:
+                  </p>
+
+                  <div className="flex flex-col sm:flex-row gap-2">
+                    <input
+                      readOnly
+                      value={sessionLink}
+                      className="flex-1 border border-neutral-700 bg-neutral-950 rounded-lg px-3 py-2 text-sm"
+                    />
+                    <button
+                      onClick={copyToClipboard}
+                      className="rounded-lg bg-slate-700 hover:bg-slate-600 px-3 py-2 text-sm font-medium transition"
+                    >
+                      {copied ? 'Copiado!' : 'Copiar'}
+                    </button>
+                  </div>
+
+                  <div className="mt-6">
+                    <button
+                      onClick={goToNextPhase}
+                      disabled={advancingRef.current}
+                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 px-5 py-3 font-semibold transition"
+                    >
+                      {advancingRef.current && (
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" d="M4 12a8 8 0 018-8v4" fill="currentColor"/>
+                        </svg>
+                      )}
+                      Iniciar Jogo
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* status badge */}
+                  <div className="mb-3">
+                    <span className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
+                      Fase: {session.phase.replaceAll('_', ' ')}
+                    </span>
+                  </div>
+
+                  {/* pergunta */}
+                  <h2 className="text-2xl font-bold mb-4">
+                    {session.currentQuestion?.text || '—'}
+                  </h2>
+
+                  {/* opções */}
+                  <div className="space-y-3">
+                    {options.map((opt, i) => (
+                      <div
+                        key={`${i}-${opt}`}
+                        className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3"
+                      >
+                        <p className="font-medium">
+                          {i + 1}) <span className="font-semibold">{opt}</span>
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* rodapé pergunta */}
+                  <div className="mt-5 flex items-center justify-between gap-3">
+                    <p className="text-sm text-neutral-300">{quizStatus}</p>
+                    <button
+                      onClick={goToNextPhase}
+                      disabled={advancingRef.current}
+                      className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 px-5 py-3 font-semibold transition"
+                    >
+                      {advancingRef.current && (
+                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+                          <path className="opacity-75" d="M4 12a8 8 0 018-8v4" fill="currentColor"/>
+                        </svg>
+                      )}
+                      Avançar para próxima fase
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
         </section>
-      )}
+
+        {/* jogadores */}
+        <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60 shadow-xl p-6 md:p-8">
+          <h3 className="text-xl font-bold mb-4">Jogadores na sessão</h3>
+          {!users.length ? (
+            <p className="text-neutral-300">Nenhum jogador entrou ainda…</p>
+          ) : (
+            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {users.map((u) => (
+                <li
+                  key={u.id}
+                  className="rounded-lg bg-neutral-950 border border-neutral-800 px-4 py-2 text-center"
+                >
+                  {u.name}
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      </div>
     </main>
-  )
+  );
 }
