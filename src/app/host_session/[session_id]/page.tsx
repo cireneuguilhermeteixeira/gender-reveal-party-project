@@ -41,6 +41,8 @@ export default function HostHome() {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [timeLeft, setTimeLeft] = useState<number | null>(null);
+
   const advancingRef = useRef(false); // evita requisições duplicadas
 
   const origin = typeof window !== 'undefined' ? window.location.origin : '';
@@ -74,7 +76,7 @@ export default function HostHome() {
       setErr(null);
       const s = await http.get<SessionWithUsers>(`/session/${sessionId}`);
       applySession(s);
-    } catch (e) {
+    } catch {
       setErr('Não foi possível carregar a sessão.');
     } finally {
       setLoading(false);
@@ -113,21 +115,70 @@ export default function HostHome() {
     fetchSession();
   }, [fetchSession]);
 
-  const quizStatus = useMemo(() => {
-    if (!session) return 'Carregando...';
+
+  const quizStatus = () => {
+    if (!session) return null;
+
     if (isQuizPreparing(session.phase)) return null;
+
     if (isQuizAnswering(session.phase)) {
-      return `Tempo: ${session.currentQuestion?.timeLimit ?? 0} s`;
+      if (timeLeft !== null && timeLeft > 0) {
+        return (
+          <div className="mt-4 text-center">
+            <p className="text-4xl font-extrabold text-red-500 animate-pulse">
+              {timeLeft}s
+            </p>
+            <p className="text-sm text-neutral-400">Tempo restante</p>
+          </div>
+        );
+      }
+      return (
+        <div className="mt-4 text-center">
+          <p className="text-2xl font-bold text-yellow-400">⏰ Tempo esgotado!</p>
+        </div>
+      );
     }
+
     if (isQuizResults(session.phase)) {
       const idx = session.currentQuestion?.correctIndex ?? -1;
       const ans = idx >= 0 ? options[idx] : undefined;
-      return ans ? `Resposta: ${ans}` : 'Resposta não definida';
+      return (
+        <p className="mt-4 text-lg font-semibold text-green-400">
+          Resposta: {ans || '—'}
+        </p>
+      );
     }
-    return null;
-  }, [session, options]);
 
-  // ---- UI ------------------------------------------------------------------
+    return null;
+};
+
+
+
+  useEffect(() => {
+  if (!session) return;
+
+  // só inicializa timer se estiver na fase "ANSWERING"
+  if (isQuizAnswering(session.phase)) {
+    const initial = session.currentQuestion?.timeLimit ?? 0;
+    setTimeLeft(initial);
+
+    let tick = initial;
+    const interval = setInterval(() => {
+      tick -= 1;
+      setTimeLeft(tick);
+      if (tick <= 0) {
+        clearInterval(interval)
+        // goToNextPhase();
+      };
+    }, 1000);
+
+    return () => clearInterval(interval);
+  } else {
+    // em qualquer outra fase reseta
+    setTimeLeft(null);
+  }
+}, [session?.phase, session?.currentQuestion.id, session]);
+
 
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
@@ -137,15 +188,7 @@ export default function HostHome() {
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">
             Painel do Host — Jogo de Chá Revelação
           </h1>
-          {!!sessionId && (
-            <button
-              onClick={copyToClipboard}
-              className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 hover:bg-indigo-500 px-3 py-2 text-sm font-medium transition"
-              title="Copiar link da sessão para os jogadores"
-            >
-              {copied ? 'Link copiado!' : 'Copiar link da sessão'}
-            </button>
-          )}
+          
         </header>
 
         {/* Alert */}
@@ -239,7 +282,7 @@ export default function HostHome() {
 
                   {/* rodapé pergunta */}
                   <div className="mt-5 flex items-center justify-between gap-3">
-                    <p className="text-sm text-neutral-300">{quizStatus}</p>
+                    <div className="text-sm text-neutral-300">{quizStatus()}</div>
                     <button
                       onClick={goToNextPhase}
                       disabled={advancingRef.current}
@@ -251,7 +294,7 @@ export default function HostHome() {
                           <path className="opacity-75" d="M4 12a8 8 0 018-8v4" fill="currentColor"/>
                         </svg>
                       )}
-                      Avançar para próxima fase
+                      Avançar
                     </button>
                   </div>
                 </>

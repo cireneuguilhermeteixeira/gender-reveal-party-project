@@ -44,6 +44,7 @@ export async function PUT(req: NextRequest, { params }: Params) {
         currentQuestionIndex,
         questions
       },
+      include: { User: true, UserAnswer: true, currentQuestion: true },
     })
     return NextResponse.json(updated)
   } catch {
