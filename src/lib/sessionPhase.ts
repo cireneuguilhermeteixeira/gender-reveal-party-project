@@ -19,9 +19,9 @@ const PHASE_ORDER: Phase[] = [
   "FINAL",
 ];
 
-export const isQuizPreparing = (p: Phase) => /^QUIZ_\d+_PREPARING$/.test(p);
-export const isQuizAnswering = (p: Phase) => /^QUIZ_\d+_ANSWERING$/.test(p);
-export const isQuizResults   = (p: Phase) => /^QUIZ_\d+_RESULTS$/.test(p);
+export const isQuizPreparing = (p?: Phase) => /^QUIZ_\d+_PREPARING$/.test(p || '');
+export const isQuizAnswering = (p?: Phase) => /^QUIZ_\d+_ANSWERING$/.test(p || '');
+export const isQuizResults   = (p?: Phase) => /^QUIZ_\d+_RESULTS$/.test(p || '');
 
 
 export function getNextPhase(state: Session): SessionState {
