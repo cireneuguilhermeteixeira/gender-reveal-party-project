@@ -31,15 +31,12 @@ export default function PlayerQuiz() {
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
 
-  // timer
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
-  const timerReady = useRef(false); // evita envio no primeiro paint
+  const timerReady = useRef(false);
 
-  // resposta local do player
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [submitted, setSubmitted] = useState(false);
-  const [answer, setAnswer] = useState<string | undefined>();
-  // polling / envio
+
   const sendingRef = useRef(false);
 
   
@@ -51,10 +48,13 @@ export default function PlayerQuiz() {
   const applySession = useCallback((s: SessionWithUsers) => {
     setSession(s);
     setOptions(parseOptions(s.currentQuestion?.options));
-    const idx = s.currentQuestion?.correctIndex ?? -1;
-    const ans = idx >= 0 ? options[idx] : undefined;
-    setAnswer(ans);
-  }, []);
+    setSelectedIndex(
+      s.UserAnswer.find(ua => 
+        ua.userId === userId && 
+        ua.questionId === s.currentQuestion?.id
+      )?.selectedIndex ?? null
+    );
+  }, [userId]);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
@@ -71,27 +71,25 @@ export default function PlayerQuiz() {
 
   useEffect(() => {
     fetchSession();
-    // pollRef.current = setInterval(fetchSession, 1500);
-    // return () => { if (pollRef.current) clearInterval(pollRef.current); };
   }, [fetchSession]);
 
-  // reconfigura timer quando muda pergunta/fase
   useEffect(() => {
     if (!session) return;
 
-    // reset seleção/local
-    setSubmitted(false);
-    setSelectedIndex(null);
+    timerReady.current = false;
 
-    timerReady.current = false; // vai armar de novo
     if (isQuizAnswering(session.phase)) {
+
+      setSubmitted(false);
+      setSelectedIndex(null);
+
       const initial = session.currentQuestion?.timeLimit ?? 0;
       setTimeLeft(initial);
       let tick = initial;
       const id = setInterval(() => {
         tick -= 1;
         setTimeLeft(tick);
-        if (!timerReady.current) timerReady.current = true; // arma após primeiro tick
+        if (!timerReady.current) timerReady.current = true;
         if (tick <= 0) clearInterval(id);
       }, 1000);
       return () => clearInterval(id);
@@ -99,21 +97,20 @@ export default function PlayerQuiz() {
     setTimeLeft(null);
   }, [session?.phase, session?.currentQuestion.id, session]);
 
-  // envia resposta
   const sendAnswer = useCallback(
     async (optionIndex: number | null, timeTaken: number) => {
       if (!sessionId || !session?.currentQuestion?.id || !userId || sendingRef.current) return;
       sendingRef.current = true;
       try {
-        await http.post('/user_answer', {
+        await http.post('/user-answers', {
           userId,
           sessionId,
           questionId: session.currentQuestion.id,
-          selectedIndex: optionIndex,   // null => não respondeu
+          selectedIndex: optionIndex,
           timeTaken,
         });
       } catch {
-        setErr('Não foi possível enviar sua resposta. Verifique a conexão.');
+        setErr('Não foi possível enviar sua resposta.');
       } finally {
         sendingRef.current = false;
       }
@@ -121,7 +118,6 @@ export default function PlayerQuiz() {
     [sessionId, session?.currentQuestion.id, userId]
   );
 
-  // clique do jogador
   const handleAnswer = useCallback(
     async (idx: number) => {
       if (!session || !isQuizAnswering(session.phase) || submitted) return;
@@ -133,7 +129,7 @@ export default function PlayerQuiz() {
     [session, submitted, timeLeft, sendAnswer]
   );
 
-  // tempo zerou → envia "sem resposta" (só após timer estar pronto)
+
   useEffect(() => {
     if (!session) return;
     if (
@@ -148,9 +144,7 @@ export default function PlayerQuiz() {
     }
   }, [timeLeft, submitted, session, sendAnswer]);
 
-  // -------- UI --------
 
-  // cores fixas por opção
   const baseBg = ['bg-red-600','bg-blue-600','bg-yellow-500','bg-green-600'] as const;
   const baseHover = ['hover:bg-red-500','hover:bg-blue-500','hover:bg-yellow-400','hover:bg-green-500'] as const;
   const baseDisabled = ['bg-red-700','bg-blue-700','bg-yellow-600','bg-green-700'] as const;
@@ -222,7 +216,20 @@ export default function PlayerQuiz() {
                 ) : isQuizPreparing(session.phase) ? (
                   <p className="text-neutral-300">Prepare-se… a pergunta vai começar!</p>
                 ) : isQuizResults(session.phase) ? (
-                  <p className="text-green-400 font-semibold">Resposta: {answer}.</p>
+                  <>
+                    {selectedIndex !== null ? (
+                      <p className="font-semibold">
+                        Você escolheu: {options[selectedIndex]}.
+                      </p>
+                    ) : (
+                      <p className="text-yellow-400 font-semibold">Você não respondeu a tempo.</p>
+                    )}
+                    {correctIdx >= 0 && correctIdx < options.length && (
+                      <p className={`font-semibold ${selectedIndex === correctIdx ? 'text-green-400' : 'text-red-400'}`}>
+                        Resposta correta: {options[correctIdx]}.
+                      </p>
+                    )}
+                  </>
                 ) : null}
               </div>
 

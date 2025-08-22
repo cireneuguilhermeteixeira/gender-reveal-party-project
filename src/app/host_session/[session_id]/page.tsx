@@ -67,7 +67,11 @@ export default function HostHome() {
     setSession(s);
     setUsers(s.User ?? []);
     setOptions(parseOptions(s.currentQuestion?.options));
-  }, []);
+    if (s.phase === 'TERMO_PREPARING') {
+        router.push(`/host_session/${sessionId}/termo`);
+        return;
+    }
+  }, [router, sessionId]);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
@@ -88,12 +92,7 @@ export default function HostHome() {
     if (advancingRef.current) return;      // trava contra toques rápidos
     advancingRef.current = true;
 
-    try {
-      // rota para TERMO
-      if (session.phase === 'TERMO_PREPARING') {
-        router.push(`/host_session/${sessionId}/termo`);
-        return;
-      }
+    try {     
 
       const nextPhase = getNextPhase(session);
       const payload = {
@@ -104,6 +103,11 @@ export default function HostHome() {
 
       const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload);
       applySession(updated);
+
+      if (nextPhase.phase === 'TERMO_PREPARING') {
+        router.push(`/host_session/${sessionId}/termo`);
+        return;
+      }
     } catch {
       setErr('Falha ao avançar de fase. Tente novamente.');
     } finally {
