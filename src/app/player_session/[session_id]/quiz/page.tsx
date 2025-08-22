@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { Prisma } from '@prisma/client';
 import { http } from '@/server/httpClient';
 import { isQuizAnswering, isQuizPreparing, isQuizResults } from '@/lib/sessionPhase';
@@ -38,7 +38,7 @@ export default function PlayerQuiz() {
   const [submitted, setSubmitted] = useState(false);
 
   const sendingRef = useRef(false);
-
+  const router = useRouter();
   
   const userId = useMemo(
     () => (typeof window !== 'undefined' ? localStorage.getItem('user_id') ?? '' : ''),
@@ -46,6 +46,11 @@ export default function PlayerQuiz() {
   );
 
   const applySession = useCallback((s: SessionWithUsers) => {
+    if (s.phase.includes('TERMO')) {
+      router.push(`/player_session/${sessionId}/termo`);
+      return;
+    }
+
     setSession(s);
     setOptions(parseOptions(s.currentQuestion?.options));
     setSelectedIndex(
@@ -54,7 +59,7 @@ export default function PlayerQuiz() {
         ua.questionId === s.currentQuestion?.id
       )?.selectedIndex ?? null
     );
-  }, [userId]);
+  }, [router, sessionId, userId]);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;

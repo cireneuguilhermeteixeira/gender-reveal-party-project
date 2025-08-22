@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { User, Prisma } from '@prisma/client';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
 import { http } from '@/server/httpClient';
 import { getNextPhase, isQuizPreparing, isQuizAnswering, isQuizResults } from '@/lib/sessionPhase';
 
@@ -33,8 +33,6 @@ function parseOptions(options: Prisma.JsonValue | null | undefined): QuestionOpt
 
 export default function HostHome() {
   const { session_id: sessionId } = useParams<{ session_id: string }>();
-  const router = useRouter();
-
   const [session, setSession] = useState<SessionWithUsers | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [options, setOptions] = useState<QuestionOptions>([]);
@@ -67,11 +65,7 @@ export default function HostHome() {
     setSession(s);
     setUsers(s.User ?? []);
     setOptions(parseOptions(s.currentQuestion?.options));
-    if (s.phase === 'TERMO_PREPARING') {
-        router.push(`/host_session/${sessionId}/termo`);
-        return;
-    }
-  }, [router, sessionId]);
+  }, []);
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
@@ -103,17 +97,12 @@ export default function HostHome() {
 
       const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload);
       applySession(updated);
-
-      if (nextPhase.phase === 'TERMO_PREPARING') {
-        router.push(`/host_session/${sessionId}/termo`);
-        return;
-      }
     } catch {
       setErr('Falha ao avançar de fase. Tente novamente.');
     } finally {
       advancingRef.current = false;
     }
-  }, [sessionId, session, router, applySession]);
+  }, [sessionId, session, applySession]);
 
   useEffect(() => {
     fetchSession();
@@ -265,12 +254,13 @@ export default function HostHome() {
                     </span>
                   </div>
 
-                  {/* pergunta */}
+
+               {session.phase.includes('QUIZ') ? <>
                   <h2 className="text-2xl font-bold mb-4">
                     {session.currentQuestion?.text || '—'}
                   </h2>
 
-                  {/* opções */}
+
                   <div className="space-y-3">
                     {options.map((opt, i) => (
                       <div
@@ -283,6 +273,11 @@ export default function HostHome() {
                       </div>
                     ))}
                   </div>
+                </> : 
+                <>
+                  <p>Termo</p>
+                
+                </>}
 
                   {/* rodapé pergunta */}
                   <div className="mt-5 flex items-center justify-between gap-3">

@@ -24,15 +24,14 @@ const KB_ROWS: KeyboardKey[][] = [
 ]
 
 export default function TermoPage() {
-  const [attempts, setAttempts] = useState<string[]>([])
-  const [colorsByRow, setColorsByRow] = useState<string[][]>([]) // cores reveladas por linha
-  const [currentAttempt, setCurrentAttempt] = useState('') // tentativa em digitação
-  const [won, setWon] = useState(false)
+  const [attempts, setAttempts] = useState<string[]>([]);
+  const [colorsByRow, setColorsByRow] = useState<string[][]>([]);
+  const [currentAttempt, setCurrentAttempt] = useState('');
+  const [won, setWon] = useState(false);
 
   const disabled = won || attempts.length >= MAX_ATTEMPTS
   const wordLen = WORD.length
 
-  // letras já avaliadas (para pintar o teclado depois que uma linha é enviada)
   const letterStatuses = useMemo(() => {
     const status = new Map<string, 'correct' | 'present' | 'absent'>()
     attempts.forEach((att, rowIdx) => {
@@ -91,7 +90,6 @@ export default function TermoPage() {
       return
     }
 
-    // somente letras (inclui Ç) — mantém o que o usuário clicar (com acento ou não)
     const letter = String(key)
     if (/^[A-Za-zÀ-ÖØ-öø-ÿÇç]$/.test(letter) && currentAttempt.length < wordLen) {
       setCurrentAttempt(prev => (prev + letter).toLowerCase())
@@ -102,7 +100,6 @@ export default function TermoPage() {
     <main className="min-h-screen flex flex-col items-center gap-4 p-4">
       <h1 className="text-2xl font-bold">Termo</h1>
 
-      {/* Tabuleiro */}
       <div className="grid gap-2">
         {Array.from({ length: MAX_ATTEMPTS }).map((_, row) => {
           const isRevealed = row < attempts.length
@@ -135,7 +132,6 @@ export default function TermoPage() {
         })}
       </div>
 
-      {/* Ações */}
       <div className="mt-2 flex items-center gap-3">
         <button
           onClick={() => setCurrentAttempt('')}
@@ -153,7 +149,6 @@ export default function TermoPage() {
         </button>
       </div>
 
-      {/* Teclado */}
       <div className="mt-2 select-none">
         {KB_ROWS.map((row, idx) => (
           <div key={idx} className="flex justify-center gap-1 mb-2">
@@ -163,7 +158,6 @@ export default function TermoPage() {
                 key === '{back}' ? '⌫' :
                 key === '{enter}' ? '↵' : key
 
-              // cor do teclado baseada em letras já avaliadas
               let keyColor = 'bg-slate-300 dark:bg-slate-700 text-black dark:text-white'
               if (!isAction && letterStatuses.size) {
                 const status = letterStatuses.get(String(key).toUpperCase())
@@ -187,7 +181,6 @@ export default function TermoPage() {
         ))}
       </div>
 
-      {/* Mensagem final */}
       {(won || attempts.length >= MAX_ATTEMPTS) && (
         <p className="mt-2 text-center">
           {won ? 'Parabéns! Você acertou.' : `A palavra era "${WORD}".`}
