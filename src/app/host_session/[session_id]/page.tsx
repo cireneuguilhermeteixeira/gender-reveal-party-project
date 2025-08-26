@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { User, Prisma } from '@prisma/client';
 import { useParams } from 'next/navigation';
 import { http } from '@/server/httpClient';
-import { getNextPhase, isQuizPreparing, isQuizAnswering, isQuizResults } from '@/lib/sessionPhase';
+import { getNextPhase, isQuizPreparing, isQuizAnswering, isQuizResults, isTermoPreparing } from '@/lib/sessionPhase';
 
 type SessionWithUsers = Prisma.SessionGetPayload<{
   include: { User: true; UserAnswer: true; currentQuestion: true }
@@ -275,7 +275,17 @@ export default function HostHome() {
                   </div>
                 </> : 
                 <>
-                  <p>Termo</p>
+                  {isTermoPreparing(session.phase) && (
+                    <div className="max-w-xl text-center p-4 border rounded bg-neutral-900/60">
+                      <p className="mb-2 font-semibold">Como funciona:</p>
+                      <ul className="list-disc text-left pl-6 space-y-1">
+                        <li>Você terá 60 segundos para adivinhar uma palavra de 5 letras.</li>
+                        <li>As cores indicam: <span className="text-green-600 font-semibold">verde</span> (letra certa no lugar certo), <span className="text-yellow-600 font-semibold">amarelo</span> (letra existe, lugar errado) e <span className="text-gray-600 font-semibold">cinza</span> (letra não existe).</li>
+                        <li>Sua pontuação aumenta quanto mais rápido você acertar.</li>
+                      </ul>
+                      <p className="mt-3 text-sm text-gray-600">Aguarde o host iniciar.</p>
+                    </div>
+                  )}
                 
                 </>}
 

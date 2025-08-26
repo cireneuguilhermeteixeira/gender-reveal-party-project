@@ -23,6 +23,11 @@ export const isQuizPreparing = (p?: Phase) => /^QUIZ_\d+_PREPARING$/.test(p || '
 export const isQuizAnswering = (p?: Phase) => /^QUIZ_\d+_ANSWERING$/.test(p || '');
 export const isQuizResults   = (p?: Phase) => /^QUIZ_\d+_RESULTS$/.test(p || '');
 
+// phase helpers
+export const isTermoPreparing = (p?: Phase) => p === 'TERMO_PREPARING'
+export const isTermoAnswering = (p?: Phase) => /^TERMO_\d+_ANSWERING$/.test(String(p))
+export const isTermoResults   = (p?: Phase) => /^TERMO_\d+_RESULTS$/.test(String(p))
+
 
 export function getNextPhase(state: Session): SessionState {
   const { phase, currentQuestionIndex: currentQuestionId } = state;
