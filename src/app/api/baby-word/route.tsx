@@ -1,13 +1,14 @@
-// app/api/baby-word/route.ts
 import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
 
-// Todas com 5 letras, ASCII-only (sem acento)
+
 const WORDS = [
-  "mamae", // mamãe
+  "mamae",
+  "papai",
   "parto",
   "filho",
   "leite",
-  "utero", // útero
+  "utero",
   "choro",
   "mamar",
   "ninar",
@@ -36,6 +37,40 @@ function pickRandomDifferent(excludeIndex: number | null): { index: number; word
   }
   return { index: i, word: WORDS[i] };
 }
+
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+    const{
+      userId,
+      sessionId,
+      index
+    } = body;
+
+    if (!sessionId || !userId || index == null || Number.isNaN(Number(index))) {
+      return NextResponse.json({ error: 'User ID is required.' }, { status: 400 });
+    }
+
+     const [user, session] = await Promise.all([
+        prisma.user.findUnique({ where: { id: userId } }),
+        prisma.session.findUnique({ where: { id: sessionId } }),
+      ]);
+
+      if (!user)    return NextResponse.json({ error: 'User not found.' }, { status: 404 });
+      if (!session) return NextResponse.json({ error: 'Session not found.' }, { status: 404 });
+    
+
+    return NextResponse.json({
+      index,
+      word: WORDS[index],
+    });
+  } catch (e) {
+    console.error(e);
+    return NextResponse.json({ error: "Failed to pick word" }, { status: 500 });
+  }
+}
+
 
 export async function GET(req: NextRequest) {
   try {
