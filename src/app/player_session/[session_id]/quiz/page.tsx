@@ -108,6 +108,7 @@ export default function PlayerQuiz() {
       sendingRef.current = true;
       try {
         await http.post('/user-answers', {
+          answerType: 'quiz',
           userId,
           sessionId,
           questionId: session.currentQuestion.id,

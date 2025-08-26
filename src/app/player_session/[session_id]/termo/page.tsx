@@ -47,8 +47,6 @@ export default function TermoPage() {
   const { session_id: sessionId } = useParams<{ session_id: string }>();
 
 
-
-
   // pega userId do localStorage (foi salvo quando usuário entrou)
   useEffect(() => {
     if (typeof window !== 'undefined') {
@@ -122,7 +120,7 @@ export default function TermoPage() {
     if (won) return
     if (timeLeft <= 0) {
       setAlertMsg('Tempo esgotado! Aguarde o resultado.')
-      void submitIfNeeded(false) // força submissão por tempo
+      submitIfNeeded(false) // força submissão por tempo
       return
     }
     const t = setTimeout(() => setTimeLeft(tl => tl - 1), 1000)
@@ -182,17 +180,14 @@ export default function TermoPage() {
       if (!userId || !session || wordIndex == null) return
       const timeTaken = Math.max(0, TERM_TIMER_SECONDS - timeLeft)
 
-      await fetch('/api/termo/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      await http.post('/user-answers', {
+          answerType: 'termo',
           userId,
           sessionId: session.id,
-          termoWordIndex: wordIndex,
           timeTaken,
-          won: justWon,
+          termoWordIndex: wordIndex,
+          justWon,
           attempts,
-        })
       })
     } catch (e) {
       console.error('submit termo failed', e)
@@ -218,16 +213,16 @@ export default function TermoPage() {
     const normalizedWord  = stripAccents(word).toLowerCase()
 
     if (normalizedGuess === normalizedWord) {
-      setWon(true)
-      setAlertMsg('Você acertou! 🎉')
-      void submitIfNeeded(true)
-      return
+      setWon(true);
+      setAlertMsg('Você acertou! 🎉');
+      submitIfNeeded(true);
+      return;
     }
 
     // se acabou tentativas, submete derrota
     if (nextAttempts.length >= MAX_ATTEMPTS) {
-      setAlertMsg('Acabaram as tentativas. Aguarde o resultado.')
-      void submitIfNeeded(false)
+      setAlertMsg('Acabaram as tentativas. Aguarde o resultado.');
+      submitIfNeeded(false);
     }
   }, [attempts, colorsByRow, currentAttempt, disabled, letterColor, submitIfNeeded, word, wordLen])
 

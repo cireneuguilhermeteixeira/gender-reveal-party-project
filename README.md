@@ -57,4 +57,6 @@ ALTER ROLE gender_reveal_user CREATEDB;
 npx prisma migrate dev -n initial_database
 npx prisma db seed
 
+npx prisma generate
+
 ```
