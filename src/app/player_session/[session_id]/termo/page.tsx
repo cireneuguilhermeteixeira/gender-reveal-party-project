@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { stripAccents } from '@/lib/utils'
-import { http } from '@/server/httpClient'
+import { http } from '@/lib/server/httpClient'
 import { Phase, Prisma } from '@prisma/client'
 import { useParams } from 'next/navigation'
 import { isTermoAnswering, isTermoPreparing, isTermoResults } from '@/lib/sessionPhase'

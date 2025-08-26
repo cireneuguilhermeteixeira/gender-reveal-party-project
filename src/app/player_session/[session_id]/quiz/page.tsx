@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Prisma } from '@prisma/client';
-import { http } from '@/server/httpClient';
+import { http } from '@/lib/server/httpClient';
 import { isQuizAnswering, isQuizPreparing, isQuizResults } from '@/lib/sessionPhase';
 
 type SessionWithUsers = Prisma.SessionGetPayload<{

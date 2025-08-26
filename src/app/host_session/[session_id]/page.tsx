@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
 import { User, Prisma, Phase } from '@prisma/client'
 import { useParams } from 'next/navigation'
-import { http } from '@/server/httpClient'
+import { http } from '@/lib/server/httpClient'
 import {
   getNextPhase,
   isQuizPreparing,

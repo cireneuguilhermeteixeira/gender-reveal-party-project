@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Session } from '@prisma/client' // se quiser tipar pela lib
-import { http } from '@/server/httpClient'
+import { http } from '@/lib/server/httpClient'
 
 
 export default function Home() {

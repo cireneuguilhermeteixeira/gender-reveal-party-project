@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { http } from '@/server/httpClient';
+import { http } from '@/lib/server/httpClient';
 import { Prisma, User } from '@prisma/client';
 
 type SessionWithUsers = Prisma.SessionGetPayload<{
