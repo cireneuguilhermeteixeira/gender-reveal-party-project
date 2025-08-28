@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { User } from '@prisma/client';
 import { useParams } from 'next/navigation';
 import { http } from '@/lib/server/httpClient';
 import { ws } from '@/lib/server/ws/wsClient';
@@ -31,6 +32,7 @@ export default function HostHome() {
   const { session_id: sessionId } = useParams<{ session_id: string }>()
 
   const [session, setSession] = useState<SessionWithUsers | null>(null)
+  const [users, setUsers] = useState<User[]>([])
   const [options, setOptions] = useState<QuestionOptions>([])
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -56,6 +58,7 @@ export default function HostHome() {
 
   const applySession = useCallback((s: SessionWithUsers) => {
     setSession(s)
+    setUsers(s.User ?? [])
     setOptions(parseOptions(s.currentQuestion?.options))
   }, [])
 
@@ -235,6 +238,7 @@ export default function HostHome() {
                 copied={copied}
                 goToNextPhase={goToNextPhase}
                 sessionLink={sessionLink}
+                users={users}
                />
               ) : (
                 <>

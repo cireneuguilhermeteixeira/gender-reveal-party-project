@@ -1,8 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { http } from '@/lib/server/httpClient';
+import { WebSocketClient, ws } from '@/lib/server/ws/wsClient';
 import { Prisma, User } from '@prisma/client';
 
 type SessionWithUsers = Prisma.SessionGetPayload<{
@@ -19,6 +20,8 @@ export default function InitialPlayerPage() {
   const [joining, setJoining] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [sessionLink, setSessionLink] = useState('');
+  const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null);
+  
   const router = useRouter();
 
   useEffect(() => {
@@ -51,7 +54,7 @@ export default function InitialPlayerPage() {
     }
   }, [router, sessionId]);
 
-  const fetchPlayers =  useCallback(async () => {
+  const fetchSession =  useCallback(async () => {
     if (!sessionId) return;
     try {
       setErr(null);
@@ -65,8 +68,39 @@ export default function InitialPlayerPage() {
   }, [sessionId, applySession]);
 
   useEffect(() => {
-    fetchPlayers();
-  }, [fetchPlayers]);
+    fetchSession();
+  }, [fetchSession]);
+
+
+  useEffect(() => {
+    const userId = localStorage.getItem('user_id') || '';
+    const user = session?.User.find(u => u.id === userId);
+    const sock = ws
+      .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })
+      .on('open', () => console.log('[ws] open'))
+      .on('error', (e) => console.warn('[ws] error', e))
+      .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
+      .on('user_joined', ({ user }) => {
+        fetchSession();
+        console.log('[ws] joined', user);
+      })
+      .on('user_left', ({ userId }) => {
+        fetchSession();
+        console.log('[ws] left', userId);
+      })
+      .on('phase_changed', ({ phase }) => {
+        fetchSession();
+        router.push(`/player_session/${sessionId}/quiz`);
+        console.log('[ws] phase ->', phase);
+      })
+      .open();
+
+    sockRef.current = sock;
+
+    return () => sockRef.current?.close();
+  }, [fetchSession, session?.User, sessionId, router]);
+    
+   
 
   const join = async () => {
     if (!sessionId || !name.trim() || joining) return;
@@ -96,7 +130,7 @@ export default function InitialPlayerPage() {
     }
   };
 
-  // UI
+
   return (
     <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
       <div className="w-full max-w-2xl space-y-6">
