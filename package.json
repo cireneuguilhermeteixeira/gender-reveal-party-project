@@ -7,6 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate:deploy": "prisma migrate deploy",
+    "heroku-postbuild": "npm run prisma:generate && npm run build",
     "prepare": "next-ws patch"
   },
   "prisma": {
