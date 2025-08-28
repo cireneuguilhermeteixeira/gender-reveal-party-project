@@ -8,6 +8,8 @@ import { Phase, Prisma } from '@prisma/client'
 import { useParams } from 'next/navigation'
 import { isTermoAnswering, isTermoPreparing, isTermoResults } from '@/lib/sessionPhase'
 import { WebSocketClient } from '@/lib/server/ws/wsClient';
+import TermoExplanation from '@/components/TermoExplanation';
+import Scoreboard from '@/components/ScoreBoard';
 
 // --- Types -----------------------------------------------------------------
 
@@ -38,111 +40,7 @@ const termoIndexKey = (sessionId: string, phase: Phase | undefined) =>
 const isFinalPhase = (phase?: Phase) =>
   phase != null && String(phase).toUpperCase().endsWith('FINAL')
 
-// --- Helpers UI -------------------------------------------------------------
 
-const medalForRank = (idx: number) =>
-  idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : `${idx + 1}º`
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((n) => n[0]?.toUpperCase())
-    .join('') || 'U'
-
-function Avatar({ name, src }: { name: string; src?: string | null }) {
-  if (src) {
-    return (
-      <div className="w-9 h-9 rounded-full overflow-hidden ring-2 ring-white/10">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={src} alt={name} className="w-full h-full object-cover" />
-      </div>
-    )
-  }
-  return (
-    <div className="w-9 h-9 rounded-full bg-slate-700 text-white grid place-items-center ring-2 ring-white/10">
-      <span className="text-xs font-bold">{initials(name)}</span>
-    </div>
-  )
-}
-
-function Scoreboard({
-  title,
-  session,
-  highlightUserId
-}: {
-  title: string
-  session?: SessionWithUsers
-  highlightUserId?: string | null
-}) {
-  const data = useMemo(() => {
-    if (!session) return []
-    return session.User.map((user) => {
-      return {
-        userId: user.id,
-        name: user.name,
-        score: user.points ?? 0
-      }
-    })
-  }, [session])
-
-  const sorted = useMemo(
-    () => (data ? [...data].sort((a, b) => b.score - a.score) : []),
-    [data]
-  )
-
-  return (
-    <div className="w-full max-w-2xl mt-6">
-      <div className="flex items-center justify-between mb-2">
-        <h2 className="text-xl font-semibold">{title}</h2>
-        {sorted.length > 0 && (
-          <span className="text-sm text-white/60">
-            {sorted.length} participante{sorted.length > 1 ? 's' : ''}
-          </span>
-        )}
-      </div>
-
-      <div className="overflow-hidden rounded-2xl border border-white/10 bg-neutral-900/60 shadow">
-        <ul className="divide-y divide-white/5">
-          {sorted.length === 0 && (
-            <li className="p-4 text-center text-white/60">Sem dados ainda…</li>
-          )}
-
-          {sorted.map((u, idx) => {
-            const isMe = highlightUserId && u.userId === highlightUserId
-            return (
-              <li
-                key={u.userId}
-                className={`flex items-center gap-3 p-3 sm:p-4 ${
-                  isMe ? 'bg-indigo-500/10 ring-1 ring-indigo-500/30' : ''
-                }`}
-              >
-                <div className="w-10 shrink-0 text-center text-lg">
-                  <span className={idx < 3 ? 'text-2xl' : 'text-base opacity-80'}>
-                    {medalForRank(idx)}
-                  </span>
-                </div>
-
-                <Avatar name={u.name} />
-
-                <div className="flex-1 min-w-0">
-                  <p className="truncate font-medium">{u.name}</p>
-                  <p className="text-sm text-white/60">ID: {u.userId}</p>
-                </div>
-
-                <div className="text-right">
-                  <p className="text-lg font-bold tabular-nums">{u.score}</p>
-                  <p className="text-xs text-white/60">pontos</p>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
-    </div>
-  )
-}
 
 export default function TermoPage() {
   const [session, setSession] = useState<SessionWithUsers | null>(null)
@@ -448,22 +346,7 @@ export default function TermoPage() {
       </header>
 
       {isTermoPreparing(session.phase) && (
-        <div className="w-full max-w-2xl p-4 border rounded-2xl bg-neutral-900/60">
-          <p className="mb-2 font-semibold">Como funciona</p>
-          <ul className="list-disc pl-6 space-y-1 text-white/80">
-            <li>
-              Você terá 60 segundos para adivinhar uma palavra de {wordLen || 5} letras.
-            </li>
-            <li>
-              As cores indicam:
-              <span className="text-green-500 font-semibold"> verde</span> (letra certa no lugar certo),
-              <span className="text-yellow-500 font-semibold"> amarelo</span> (letra existe, lugar errado) e
-              <span className="text-gray-400 font-semibold"> cinza</span> (letra não existe).
-            </li>
-            <li>Sua pontuação aumenta quanto mais rápido você acertar.</li>
-          </ul>
-          <p className="mt-3 text-sm text-white/60">Aguarde o host iniciar.</p>
-        </div>
+        <TermoExplanation/>
       )}
 
       {isTermoAnswering(session.phase) && (
