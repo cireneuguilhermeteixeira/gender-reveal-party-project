@@ -57,31 +57,28 @@ export default function PlayerQuiz() {
       setErr(null);
       const s = await http.get<SessionWithUsers>(`/session/${sessionId}`);
       applySession(s);
-    } catch {
-      setErr('Não foi possível atualizar a sessão agora.');
-    } finally {
-      setLoading(false);
-    }
-  }, [sessionId, applySession]);
 
-  useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
+      const user = s?.User.find(u => u.id === userId);
+      console.log('user:', user);
+      if (!user) {
+        setErr('Você não está mais na sala. Tente entrar novamente.');
+        setSession(null);
+        router.push(`/player_session/${sessionId}`);
+        return;
+      }
+      if (sockRef.current) return;
 
-
-  useEffect(() => {
-    const user = session?.User.find(u => u.id === userId);
-    const sock = ws
+      const sock = ws
       .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })
       .on('open', () => console.log('[ws] open'))
       .on('error', (e) => console.warn('[ws] error', e))
       .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
       .on('user_joined', ({ user }) => {
-        fetchSession();
+        // fetchSession();
         console.log('[ws] joined', user);
       })
       .on('user_left', ({ userId }) => {
-        fetchSession();
+        // fetchSession();
         console.log('[ws] left', userId);
       })
       .on('phase_changed', ({ phase }) => {
@@ -90,10 +87,23 @@ export default function PlayerQuiz() {
       })
       .open();
 
-    sockRef.current = sock;
+      sockRef.current = sock;
 
+    } catch {
+      setErr('Não foi possível atualizar a sessão agora.');
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, applySession, userId, router]);
+
+  useEffect(() => {
+    fetchSession();
+  }, [fetchSession]);
+
+
+  useEffect(() => {   
     return () => sockRef.current?.close();
-  }, [fetchSession, session?.User, sessionId, userId])
+  }, [])
 
   
 
@@ -237,7 +247,7 @@ export default function PlayerQuiz() {
                     <p className="text-xl md:text-2xl font-bold text-amber-400">⏰ Tempo esgotado!</p>
                   )
                 ) : isQuizPreparing(session.phase) ? (
-                  <p className="text-neutral-300">Prepare-se… a pergunta vai começar!</p>
+                  <p className="text-neutral-300">Prepare-se… a contagem vai começar!</p>
                 ) : isQuizResults(session.phase) ? (
                   <>
                     {selectedIndex !== null ? (
@@ -257,7 +267,7 @@ export default function PlayerQuiz() {
               </div>
 
               {/* opções com cores fixas */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+             {!isQuizPreparing(session.phase) && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {options.map((opt, i) => {
                   const isSelected = selectedIndex === i;
                   const disabled =
@@ -288,7 +298,7 @@ export default function PlayerQuiz() {
                     </button>
                   );
                 })}
-              </div>
+              </div>}
 
               {/* rodapé */}
               <div className="mt-5 text-center text-sm text-neutral-400">

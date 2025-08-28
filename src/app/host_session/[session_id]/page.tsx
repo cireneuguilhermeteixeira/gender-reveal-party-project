@@ -117,6 +117,8 @@ export default function HostHome() {
 
   useEffect(() => {
 
+    if (sockRef.current) return;
+
     const sock = ws
       .connect({ path: '/ws', sessionId, userId: '0', name: 'HOST', role: 'host', autoReconnect: true })
       .on('open', () => console.log('[ws] open'))
@@ -152,7 +154,8 @@ export default function HostHome() {
         tick -= 1
         setTimeLeft(tick)
         if (tick <= 0) {
-          clearInterval(interval)
+          clearInterval(interval);
+          goToNextPhase();
         }
       }, 1000)
 
@@ -160,7 +163,7 @@ export default function HostHome() {
     } else {
       setTimeLeft(null)
     }
-  }, [session?.phase, session?.currentQuestion?.id, session])
+  }, [session?.phase, session?.currentQuestion.id, session, goToNextPhase])
 
   // UI helpers
   const quizStatus = () => {
@@ -249,7 +252,7 @@ export default function HostHome() {
                     <>
                       <h2 className="text-2xl font-bold mb-4">{session.currentQuestion?.text || '—'}</h2>
 
-                      <div className="space-y-3">
+                      {!isQuizPreparing(session.phase) && <div className="space-y-3">
                         {options.map((opt, i) => (
                           <div key={`${i}-${opt}`} className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3">
                             <p className="font-medium">
@@ -257,7 +260,7 @@ export default function HostHome() {
                             </p>
                           </div>
                         ))}
-                      </div>
+                      </div>}
 
                       <div className="mt-4">{quizStatus()}</div>
 

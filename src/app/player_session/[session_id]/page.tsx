@@ -73,32 +73,8 @@ export default function InitialPlayerPage() {
 
 
   useEffect(() => {
-    const userId = localStorage.getItem('user_id') || '';
-    const user = session?.User.find(u => u.id === userId);
-    const sock = ws
-      .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })
-      .on('open', () => console.log('[ws] open'))
-      .on('error', (e) => console.warn('[ws] error', e))
-      .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
-      .on('user_joined', ({ user }) => {
-        fetchSession();
-        console.log('[ws] joined', user);
-      })
-      .on('user_left', ({ userId }) => {
-        fetchSession();
-        console.log('[ws] left', userId);
-      })
-      .on('phase_changed', ({ phase }) => {
-        fetchSession();
-        router.push(`/player_session/${sessionId}/quiz`);
-        console.log('[ws] phase ->', phase);
-      })
-      .open();
-
-    sockRef.current = sock;
-
     return () => sockRef.current?.close();
-  }, [fetchSession, session?.User, sessionId, router]);
+  }, []);
     
    
 
@@ -113,6 +89,26 @@ export default function InitialPlayerPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('user_id', user.id);
         localStorage.setItem('session_id', sessionId);
+
+        const sock = ws
+        .connect({ path: '/ws', sessionId, userId: user.id, name: user.name, role: 'player', autoReconnect: true })
+        .on('open', () => console.log('[ws] open'))
+        .on('error', (e) => console.warn('[ws] error', e))
+        .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
+        .on('user_joined', ({ user }) => {
+          fetchSession();
+          console.log('[ws] joined', user);
+        })
+        .on('user_left', ({ userId }) => {
+          fetchSession();
+          console.log('[ws] left', userId);
+        })
+        .on('phase_changed', ({ phase }) => {
+          router.push(`/player_session/${sessionId}/quiz`);
+          console.log('[ws] phase ->', phase);
+        })
+        .open();
+        sockRef.current = sock;
       }
       // adiciona otimistamente na UI (o polling consolida depois)
       setSession(prev =>
