@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useMemo, useState, useCallback, useRef } from 'react'
-import { User, Prisma, Phase } from '@prisma/client'
-import { useParams } from 'next/navigation'
-import { http } from '@/lib/server/httpClient'
+import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
+import { User, Prisma, Phase } from '@prisma/client';
+import { useParams } from 'next/navigation';
+import { http } from '@/lib/server/httpClient';
+import { ws } from '@/lib/server/ws/wsClient';
 import {
   getNextPhase,
   isQuizPreparing,
@@ -12,7 +13,9 @@ import {
   isTermoPreparing,
   isTermoAnswering,
   isTermoResults
-} from '@/lib/sessionPhase'
+} from '@/lib/sessionPhase';
+import { WebSocketClient } from '@/lib/server/ws/wsClient';
+
 
 
 type SessionWithUsers = Prisma.SessionGetPayload<{
@@ -138,6 +141,7 @@ export default function HostHome() {
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
+  const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null)
 
 
   const advancingRef = useRef(false) // evita requisições duplicadas
@@ -179,43 +183,55 @@ export default function HostHome() {
 
 
   const goToNextPhase = useCallback(async () => {
-    if (!sessionId || !session) return
-    if (advancingRef.current) return
-    advancingRef.current = true
+    sockRef.current?.sendPhaseChange('QUIZ_ANSWERING');
+    // if (!sessionId || !session) return
+    // if (advancingRef.current) return
+    // advancingRef.current = true
 
-    try {
-      const nextPhase = getNextPhase(session)
-      const payload = {
-        phase: nextPhase.phase,
-        currentQuestionIndex: nextPhase?.currentQuestionIndex,
-        questions: nextPhase?.questions
-      }
+    // try {
+    //   const nextPhase = getNextPhase(session)
+    //   const payload = {
+    //     phase: nextPhase.phase,
+    //     currentQuestionIndex: nextPhase?.currentQuestionIndex,
+    //     questions: nextPhase?.questions
+    //   }
 
-      const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload)
-      applySession(updated)
+    //   const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload)
+    //   applySession(updated)
 
-      // se avançou para RESULTS ou FINAL, atualiza o placar imediatamente
-      if (isQuizResults(updated.phase) || isTermoResults(updated.phase) || isFinalPhase(updated.phase)) {
-        fetchSession()
-      }
-    } catch {
-      setErr('Falha ao avançar de fase. Tente novamente.')
-    } finally {
-      advancingRef.current = false
-    }
+    //   // se avançou para RESULTS ou FINAL, atualiza o placar imediatamente
+    //   if (isQuizResults(updated.phase) || isTermoResults(updated.phase) || isFinalPhase(updated.phase)) {
+    //     fetchSession()
+    //   }
+    // } catch {
+    //   setErr('Falha ao avançar de fase. Tente novamente.')
+    // } finally {
+    //   advancingRef.current = false
+    // }
   }, [sessionId, session, applySession, fetchSession])
 
   useEffect(() => {
     fetchSession()
   }, [fetchSession])
 
-  // Atualiza placar sempre que fase for RESULTS ou FINAL
-  // useEffect(() => {
-  //   if (!session) return
-  //   if (isQuizResults(session.phase) || isTermoResults(session.phase) || isFinalPhase(session.phase)) {
-  //     fetchSession()
-  //   }
-  // }, [session?.phase, session, fetchScoreboard])
+ 
+
+
+  useEffect(() => {
+
+    const sock = ws
+      .connect({ path: '/ws', sessionId, userId: '0', name: 'HOST', role: 'host' })
+      .on('open', () => console.log('host connected'))
+      .on('message', (m) => console.log('event', m))
+      .on('text', (t) => console.log('raw text', t))   // <— Isso agora vai logar respostas não-JSON
+      .on('error', (e) => console.warn(e))
+      .open()
+    sockRef.current = sock;
+    sockRef.current?.sendPhaseChange('QUIZ_ANSWERING');
+
+    return () => sockRef.current?.close();
+  }, [sessionId])
+
 
   // Timer do QUIZ (somente na fase ANSWERING)
   useEffect(() => {

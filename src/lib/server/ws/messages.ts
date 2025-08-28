@@ -41,7 +41,7 @@ export type ServerToClient =
   | { type: 'error'; message: string }
 
 export function encode(msg: ClientToServer | ServerToClient): string {
-  return JSON.stringify(msg)
+  return JSON.stringify(msg);
 }
 
 export function safeParse<T = unknown>(raw: string): T | null {

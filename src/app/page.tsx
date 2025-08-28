@@ -1,9 +1,27 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
-import { Session } from '@prisma/client' // se quiser tipar pela lib
-import { http } from '@/lib/server/httpClient'
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { Session } from '@prisma/client';
+import { http } from '@/lib/server/httpClient';
+
+
+// player.tsx (example)
+
+// export function PlayerWS({ sessionId, userId, name }: { sessionId: string; userId: string; name?: string }) {
+//   useEffect(() => {
+//     const ws = new WebSocketClient('/api')
+//     const sock = ws
+//       .connect({ path: '/ws', sessionId, userId, name, role: 'player' })
+//       .on('open', () => console.log('player connected'))
+//       .on('message', (m) => console.log('event', m))
+//       .on('error', (e) => console.warn(e))
+//       .open()
+//     return () => sock.close()
+//   }, [sessionId, userId, name])
+
+//   return null
+// }
 
 
 export default function Home() {

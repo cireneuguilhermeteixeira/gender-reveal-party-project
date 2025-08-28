@@ -26,6 +26,7 @@ export type WSEventHandlers = {
   close: (evt: CloseEvent | { code: number; reason: string }) => void
   error: (message: string) => void
   message: (msg: ServerToClient) => void
+  text: (msg: string) => void
 }
 
 export class WebSocketClient {
@@ -91,12 +92,21 @@ export class ManagedSocket {
       this.startHeartbeat()
     }
 
-    this.ws.onmessage = (ev) => {
-      const data = typeof ev.data === 'string' ? ev.data : ''
-      const msg = safeParse<ServerToClient>(data)
-      if (!msg) return
-      this.handlers.message?.(msg)
-    }
+    this.ws.onmessage = async (ev) => {
+      let text: string | null = null;
+      if (typeof ev.data === 'string') text = ev.data;
+      else if (ev.data instanceof Blob) text = await ev.data.text();
+      else if (ev.data instanceof ArrayBuffer) text = new TextDecoder().decode(ev.data);
+      if (!text) return;
+
+      const parsed = safeParse<ServerToClient>(text);
+      if (parsed) {
+        this.handlers.message?.(parsed);
+      } else {
+        (this.handlers)?.text?.(text);
+      }
+    };
+
 
     this.ws.onerror = () => this.handlers.error?.('WebSocket error')
 
@@ -124,8 +134,12 @@ export class ManagedSocket {
   }
 
   send(raw: ClientToServer) {
+    console.log('WS SEND', raw);
+    console.log('this.ws.readyState ', this.ws?.readyState);
+    console.log('WebSocket.OPEN', WebSocket.OPEN);
+
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(encode(raw))
+      this.ws.send(encode(raw));
     }
   }
 
