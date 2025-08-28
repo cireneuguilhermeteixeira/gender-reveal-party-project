@@ -10,6 +10,7 @@ import { isTermoAnswering, isTermoPreparing, isTermoResults } from '@/lib/sessio
 import { WebSocketClient } from '@/lib/server/ws/wsClient';
 import TermoExplanation from '@/components/TermoExplanation';
 import Scoreboard from '@/components/ScoreBoard';
+import StatusBadge from '@/components/StatusBadge';
 
 // --- Types -----------------------------------------------------------------
 
@@ -340,9 +341,7 @@ export default function TermoPage() {
     <main className="min-h-screen flex flex-col items-center gap-4 p-4">
       <header className="w-full max-w-2xl flex items-center justify-between">
         <h1 className="text-2xl font-bold">Termo</h1>
-        <div className="text-sm text-white/70">
-          Fase: <span className="font-mono">{String(session.phase)}</span>
-        </div>
+        <StatusBadge phase={session.phase} />
       </header>
 
       {isTermoPreparing(session.phase) && (

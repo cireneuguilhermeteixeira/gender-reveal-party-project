@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
-import { User, Prisma, Phase } from '@prisma/client';
 import { useParams } from 'next/navigation';
 import { http } from '@/lib/server/httpClient';
 import { ws } from '@/lib/server/ws/wsClient';
@@ -12,43 +11,18 @@ import {
   isQuizResults,
   isTermoPreparing,
   isTermoAnswering,
-  isTermoResults
+  isTermoResults,
+  parseOptions,
+  isFinalPhase,
+  SessionWithUsers,
+  QuestionOptions
 } from '@/lib/sessionPhase';
+import { useRouter } from 'next/navigation';
 import { WebSocketClient } from '@/lib/server/ws/wsClient';
 import TermoExplanation from '@/components/TermoExplanation';
 import Scoreboard from '@/components/ScoreBoard';
-
-
-
-type SessionWithUsers = Prisma.SessionGetPayload<{
-  include: { User: true; UserAnswer: true; currentQuestion: true }
-}>
-
-type QuestionOptions = string[]
-
-
-// ---------------------------------------------------------------------------
-// Helpers
-// ---------------------------------------------------------------------------
-
-function parseOptions(options: Prisma.JsonValue | null | undefined): QuestionOptions {
-  if (typeof options === 'string') {
-    try {
-      const parsed = JSON.parse(options)
-      return Array.isArray(parsed)
-        ? parsed.filter((o: unknown): o is string => typeof o === 'string')
-        : []
-    } catch {
-      return []
-    }
-  }
-  if (Array.isArray(options)) {
-    return options.filter((o: unknown): o is string => typeof o === 'string')
-  }
-  return []
-}
-
-const isFinalPhase = (phase?: Phase) => phase != null && String(phase).toUpperCase().endsWith('FINAL')
+import WaitingForPlayers from '@/components/WaitingForPlayers';
+import StatusBadge from '@/components/StatusBadge';
 
 
 
@@ -57,16 +31,14 @@ export default function HostHome() {
   const { session_id: sessionId } = useParams<{ session_id: string }>()
 
   const [session, setSession] = useState<SessionWithUsers | null>(null)
-  const [users, setUsers] = useState<User[]>([])
   const [options, setOptions] = useState<QuestionOptions>([])
   const [copied, setCopied] = useState(false)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
   const [timeLeft, setTimeLeft] = useState<number | null>(null)
   const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null)
-
-
   const advancingRef = useRef(false) // evita requisições duplicadas
+  const router = useRouter();
 
   const origin = typeof window !== 'undefined' ? window.location.origin : ''
   const sessionLink = useMemo(() => (!sessionId ? '' : `${origin}/player_session/${sessionId}`), [sessionId, origin])
@@ -84,7 +56,6 @@ export default function HostHome() {
 
   const applySession = useCallback((s: SessionWithUsers) => {
     setSession(s)
-    setUsers(s.User ?? [])
     setOptions(parseOptions(s.currentQuestion?.options))
   }, [])
 
@@ -96,11 +67,13 @@ export default function HostHome() {
       const s = await http.get<SessionWithUsers>(`/session/${sessionId}`)
       applySession(s)
     } catch {
-      setErr('Não foi possível carregar a sessão.')
+      setErr('Não foi possível carregar a sessão.');
+      localStorage.clear();
+      router.push('/');
     } finally {
       setLoading(false)
     }
-  }, [sessionId, applySession])
+  }, [sessionId, applySession, router])
 
 
 
@@ -256,37 +229,17 @@ export default function HostHome() {
           ) : (
             <div className="p-6 md:p-8">
               {session.phase === 'WAITING_FOR_PLAYERS' ? (
-                <>
-                  <h2 className="text-xl font-semibold mb-2">Sessão criada ✅</h2>
-                  <p className="text-sm text-neutral-300 mb-4">Compartilhe o link com os participantes para eles entrarem:</p>
-
-                  <div className="flex flex-col sm:flex-row gap-2">
-                    <input readOnly value={sessionLink} className="flex-1 border border-neutral-700 bg-neutral-950 rounded-lg px-3 py-2 text-sm" />
-                    <button onClick={copyToClipboard} className="rounded-lg bg-slate-700 hover:bg-slate-600 px-3 py-2 text-sm font-medium transition">
-                      {copied ? 'Copiado!' : 'Copiar'}
-                    </button>
-                  </div>
-
-                  <div className="mt-6">
-                    <button onClick={goToNextPhase} disabled={advancingRef.current} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 px-5 py-3 font-semibold transition">
-                      {advancingRef.current && (
-                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" d="M4 12a8 8 0 018-8v4" fill="currentColor" />
-                        </svg>
-                      )}
-                      Iniciar Jogo
-                    </button>
-                  </div>
-                </>
+               <WaitingForPlayers
+                advancingRef={advancingRef}
+                copyToClipboard={copyToClipboard}
+                copied={copied}
+                goToNextPhase={goToNextPhase}
+                sessionLink={sessionLink}
+               />
               ) : (
                 <>
                   {/* status badge */}
-                  <div className="mb-3">
-                    <span className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
-                      Fase: {session.phase.replaceAll('_', ' ')}
-                    </span>
-                  </div>
+                  <StatusBadge phase={session.phase} />
 
                   {session.phase.includes('QUIZ') ? (
                     <>
@@ -365,22 +318,6 @@ export default function HostHome() {
                 </>
               )}
             </div>
-          )}
-        </section>
-
-        {/* jogadores */}
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60 shadow-xl p-6 md:p-8">
-          <h3 className="text-xl font-bold mb-4">Jogadores na sessão</h3>
-          {!users.length ? (
-            <p className="text-neutral-300">Nenhum jogador entrou ainda…</p>
-          ) : (
-            <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {users.map((u) => (
-                <li key={u.id} className="rounded-lg bg-neutral-950 border border-neutral-800 px-4 py-2 text-center">
-                  {u.name}
-                </li>
-              ))}
-            </ul>
           )}
         </section>
       </div>

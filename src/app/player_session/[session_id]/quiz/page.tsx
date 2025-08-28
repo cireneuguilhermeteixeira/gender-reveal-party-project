@@ -2,29 +2,14 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { Prisma } from '@prisma/client';
 import { http } from '@/lib/server/httpClient';
 import { ws } from '@/lib/server/ws/wsClient';
-import { isQuizAnswering, isQuizPreparing, isQuizResults } from '@/lib/sessionPhase';
+import { isQuizAnswering, isQuizPreparing, isQuizResults, parseOptions, QuestionOptions, SessionWithUsers } from '@/lib/sessionPhase';
 import { WebSocketClient } from '@/lib/server/ws/wsClient';
+import StatusBadge from '@/components/StatusBadge';
 
 
-type SessionWithUsers = Prisma.SessionGetPayload<{
-  include: { User: true; UserAnswer: true; currentQuestion: true }
-}>;
 
-type QuestionOptions = string[];
-
-function parseOptions(options: Prisma.JsonValue | null | undefined): QuestionOptions {
-  if (typeof options === 'string') {
-    try {
-      const parsed = JSON.parse(options);
-      return Array.isArray(parsed) ? parsed.filter((o: unknown): o is string => typeof o === 'string') : [];
-    } catch { return []; }
-  }
-  if (Array.isArray(options)) return options.filter((o: unknown): o is string => typeof o === 'string');
-  return [];
-}
 
 export default function PlayerQuiz() {
   const { session_id: sessionId } = useParams<{ session_id: string }>();
@@ -199,9 +184,7 @@ export default function PlayerQuiz() {
         <header className="flex items-center justify-between">
           <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Quiz — Jogador</h1>
           {session?.phase && (
-            <span className="inline-flex items-center rounded-full border border-indigo-500/30 bg-indigo-500/10 px-3 py-1 text-xs font-medium text-indigo-300">
-              Fase: {session.phase.replaceAll('_', ' ')}
-            </span>
+            <StatusBadge phase={session.phase} />
           )}
         </header>
 

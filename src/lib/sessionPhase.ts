@@ -1,4 +1,4 @@
-import { Phase, Question, Session } from "@prisma/client";
+import { Phase, Prisma, Question, Session } from "@prisma/client";
 
 const QUIZ_PHASES_SIZE = 10;
 
@@ -27,6 +27,32 @@ export const isQuizResults   = (p?: Phase) => /^QUIZ_\d+_RESULTS$/.test(p || '')
 export const isTermoPreparing = (p?: Phase) => p === 'TERMO_PREPARING'
 export const isTermoAnswering = (p?: Phase) => /^TERMO_\d+_ANSWERING$/.test(String(p))
 export const isTermoResults   = (p?: Phase) => /^TERMO_\d+_RESULTS$/.test(String(p))
+
+
+export type SessionWithUsers = Prisma.SessionGetPayload<{
+  include: { User: true; UserAnswer: true; currentQuestion: true }
+}>;
+
+export type QuestionOptions = string[];
+
+export function parseOptions(options: Prisma.JsonValue | null | undefined): QuestionOptions {
+  if (typeof options === 'string') {
+    try {
+      const parsed = JSON.parse(options)
+      return Array.isArray(parsed)
+        ? parsed.filter((o: unknown): o is string => typeof o === 'string')
+        : []
+    } catch {
+      return []
+    }
+  }
+  if (Array.isArray(options)) {
+    return options.filter((o: unknown): o is string => typeof o === 'string')
+  }
+  return []
+}
+
+export const isFinalPhase = (phase?: Phase) => phase != null && String(phase).toUpperCase().endsWith('FINAL')
 
 
 export function getNextPhase(state: Session): SessionState {
