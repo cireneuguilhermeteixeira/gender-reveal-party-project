@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { Prisma } from '@prisma/client';
 import { http } from '@/lib/server/httpClient';
+import { ws } from '@/lib/server/ws/wsClient';
 import { isQuizAnswering, isQuizPreparing, isQuizResults } from '@/lib/sessionPhase';
+import { WebSocketClient } from '@/lib/server/ws/wsClient';
+
 
 type SessionWithUsers = Prisma.SessionGetPayload<{
   include: { User: true; UserAnswer: true; currentQuestion: true }
@@ -38,6 +41,8 @@ export default function PlayerQuiz() {
   const [submitted, setSubmitted] = useState(false);
 
   const sendingRef = useRef(false);
+  const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null)
+  
   const router = useRouter();
   
   const userId = useMemo(
@@ -77,6 +82,35 @@ export default function PlayerQuiz() {
   useEffect(() => {
     fetchSession();
   }, [fetchSession]);
+
+
+  useEffect(() => {
+    const user = session?.User.find(u => u.id === userId);
+    const sock = ws
+      .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })
+      .on('open', () => console.log('[ws] open'))
+      .on('error', (e) => console.warn('[ws] error', e))
+      .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
+      .on('user_joined', ({ user }) => {
+        fetchSession();
+        console.log('[ws] joined', user);
+      })
+      .on('user_left', ({ userId }) => {
+        fetchSession();
+        console.log('[ws] left', userId);
+      })
+      .on('phase_changed', ({ phase }) => {
+        fetchSession();
+        console.log('[ws] phase ->', phase);
+      })
+      .open();
+
+    sockRef.current = sock;
+
+    return () => sockRef.current?.close();
+  }, [fetchSession, session?.User, sessionId, userId])
+
+  
 
   useEffect(() => {
     if (!session) return;

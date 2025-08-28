@@ -183,31 +183,31 @@ export default function HostHome() {
 
 
   const goToNextPhase = useCallback(async () => {
-    sockRef.current?.sendPhaseChange('QUIZ_ANSWERING');
-    // if (!sessionId || !session) return
-    // if (advancingRef.current) return
-    // advancingRef.current = true
+    
+    if (!sessionId || !session) return
+    if (advancingRef.current) return
+    advancingRef.current = true
 
-    // try {
-    //   const nextPhase = getNextPhase(session)
-    //   const payload = {
-    //     phase: nextPhase.phase,
-    //     currentQuestionIndex: nextPhase?.currentQuestionIndex,
-    //     questions: nextPhase?.questions
-    //   }
+    try {
+      const nextPhase = getNextPhase(session)
+      const payload = {
+        phase: nextPhase.phase,
+        currentQuestionIndex: nextPhase?.currentQuestionIndex,
+        questions: nextPhase?.questions
+      }
 
-    //   const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload)
-    //   applySession(updated)
-
-    //   // se avançou para RESULTS ou FINAL, atualiza o placar imediatamente
-    //   if (isQuizResults(updated.phase) || isTermoResults(updated.phase) || isFinalPhase(updated.phase)) {
-    //     fetchSession()
-    //   }
-    // } catch {
-    //   setErr('Falha ao avançar de fase. Tente novamente.')
-    // } finally {
-    //   advancingRef.current = false
-    // }
+      const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload)
+      applySession(updated)
+      sockRef.current?.sendPhaseChange(updated.phase);
+      // se avançou para RESULTS ou FINAL, atualiza o placar imediatamente
+      if (isQuizResults(updated.phase) || isTermoResults(updated.phase) || isFinalPhase(updated.phase)) {
+        fetchSession()
+      }
+    } catch {
+      setErr('Falha ao avançar de fase. Tente novamente.')
+    } finally {
+      advancingRef.current = false
+    }
   }, [sessionId, session, applySession, fetchSession])
 
   useEffect(() => {
@@ -220,17 +220,25 @@ export default function HostHome() {
   useEffect(() => {
 
     const sock = ws
-      .connect({ path: '/ws', sessionId, userId: '0', name: 'HOST', role: 'host' })
-      .on('open', () => console.log('host connected'))
-      .on('message', (m) => console.log('event', m))
-      .on('text', (t) => console.log('raw text', t))   // <— Isso agora vai logar respostas não-JSON
-      .on('error', (e) => console.warn(e))
-      .open()
+      .connect({ path: '/ws', sessionId, userId: '0', name: 'HOST', role: 'host', autoReconnect: true })
+      .on('open', () => console.log('[ws] open'))
+      .on('error', (e) => console.warn('[ws] error', e))
+      .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
+      .on('user_joined', ({ user }) => {
+        fetchSession();
+        console.log('[ws] joined', user);
+      })
+      .on('user_left', ({ userId }) => {
+        fetchSession();
+        console.log('[ws] left', userId);
+      })
+      .on('phase_changed', ({ phase }) => console.log('[ws] phase ->', phase))
+      .open();
+
     sockRef.current = sock;
-    sockRef.current?.sendPhaseChange('QUIZ_ANSWERING');
 
     return () => sockRef.current?.close();
-  }, [sessionId])
+  }, [fetchSession, sessionId])
 
 
   // Timer do QUIZ (somente na fase ANSWERING)

@@ -3,9 +3,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { stripAccents } from '@/lib/utils'
 import { http } from '@/lib/server/httpClient'
+import { ws } from '@/lib/server/ws/wsClient';
 import { Phase, Prisma } from '@prisma/client'
 import { useParams } from 'next/navigation'
 import { isTermoAnswering, isTermoPreparing, isTermoResults } from '@/lib/sessionPhase'
+import { WebSocketClient } from '@/lib/server/ws/wsClient';
 
 // --- Types -----------------------------------------------------------------
 
@@ -154,20 +156,18 @@ export default function TermoPage() {
   const [colorsByRow, setColorsByRow] = useState<string[][]>([])
   const [won, setWon] = useState(false)
   const [timeLeft, setTimeLeft] = useState(TERM_TIMER_SECONDS)
-  const [alertMsg, setAlertMsg] = useState<string | null>(null)
-
-  const [userId, setUserId] = useState<string | null>(null)
-
+  const [alertMsg, setAlertMsg] = useState<string | null>(null);
   const postingRef = useRef(false) // evita post duplo
+  const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null);
+
+  const userId = useMemo(
+    () => (typeof window !== 'undefined' ? localStorage.getItem('user_id') ?? '' : ''),
+    []
+  );
 
   const { session_id: sessionId } = useParams<{ session_id: string }>()
 
-  // pega userId do localStorage (foi salvo quando usuário entrou)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      setUserId(localStorage.getItem('user_id'))
-    }
-  }, [])
+
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return
@@ -186,6 +186,32 @@ export default function TermoPage() {
     fetchSession()
   }, [fetchSession])
 
+  useEffect(() => {
+    const user = session?.User.find(u => u.id === userId);
+    const sock = ws
+      .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })
+      .on('open', () => console.log('[ws] open'))
+      .on('error', (e) => console.warn('[ws] error', e))
+      .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
+      .on('user_joined', ({ user }) => {
+        fetchSession();
+        console.log('[ws] joined', user);
+      })
+      .on('user_left', ({ userId }) => {
+        fetchSession();
+        console.log('[ws] left', userId);
+      })
+      .on('phase_changed', ({ phase }) => {
+        fetchSession();
+        console.log('[ws] phase ->', phase);
+      })
+      .open();
+
+    sockRef.current = sock;
+
+    return () => sockRef.current?.close();
+  }, [fetchSession, session?.User, sessionId, userId])
+  
  
 
   const requestNewWord = useCallback(
