@@ -1,11 +1,11 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 import { Phase, Question } from '@prisma/client';
 
-type Params = { params: { session_id: string } }
 
 
-export async function GET(_: unknown, { params }: Params) {
+export async function GET(_: unknown, { params }: any) {
   const { session_id } = params;
 
   if (!session_id) {
@@ -21,7 +21,7 @@ export async function GET(_: unknown, { params }: Params) {
 }
 
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(req: NextRequest, { params }: any) {
   const { session_id } = params;
   
   if (!session_id) {

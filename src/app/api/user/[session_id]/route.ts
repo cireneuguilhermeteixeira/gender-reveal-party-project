@@ -1,10 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { NextRequest, NextResponse } from 'next/server';
 import prisma from '@/lib/prisma';
 
-type Params = { params: { session_id: string } }
 
-
-export async function GET(_ : unknown, { params }: Params) {
+export async function GET(_ : unknown, { params }: any) {
   
   const { session_id } = params;
 
@@ -20,7 +19,7 @@ export async function GET(_ : unknown, { params }: Params) {
 }
 
 
-export async function PUT(req: NextRequest, { params }: Params) {
+export async function PUT(req: NextRequest, { params }: any) {
   const { session_id } = params;
   const { points, userId } : { points : number, userId: string } = await req.json();
 
