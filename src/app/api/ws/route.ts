@@ -2,6 +2,9 @@ import type { WebSocket } from 'ws';
 export const runtime = 'nodejs';
 
 
+console.log('[ws] route loaded');
+
+
 // Mensagens tipadas (resumo)
 type Role = 'host' | 'player';
 type ClientToServer =
