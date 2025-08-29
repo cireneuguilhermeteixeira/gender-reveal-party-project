@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "npx ts-node server.ts",
+    "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start",
+    "start": "npx ts-node server.ts",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
