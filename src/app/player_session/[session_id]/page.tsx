@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import { http } from '@/lib/server/httpClient';
 import { WebSocketClient, ws } from '@/lib/server/ws/wsClient';
 import { Prisma, User } from '@prisma/client';
+import Loading from '@/components/Loading';
 
 type SessionWithUsers = Prisma.SessionGetPayload<{
   include: { User: true; UserAnswer: true; currentQuestion: true }
@@ -89,7 +90,7 @@ export default function InitialPlayerPage() {
       if (typeof window !== 'undefined') {
         localStorage.setItem('user_id', user.id);
         localStorage.setItem('session_id', sessionId);
-
+        fetchSession();
         const sock = ws
         .connect({ path: '/ws', sessionId, userId: user.id, name: user.name, role: 'player', autoReconnect: true })
         .on('open', () => console.log('[ws] open'))
@@ -175,11 +176,7 @@ export default function InitialPlayerPage() {
               <div className="mt-6">
                 <h3 className="text-base font-semibold mb-2">Jogadores na sala</h3>
                 {loading ? (
-                  <div className="space-y-2 animate-pulse">
-                    <div className="h-9 bg-neutral-800 rounded" />
-                    <div className="h-9 bg-neutral-800 rounded" />
-                    <div className="h-9 bg-neutral-800 rounded" />
-                  </div>
+                  <Loading/>
                 ) : session?.User.length === 0 ? (
                   <p className="text-neutral-300 text-sm">Ainda não há jogadores…</p>
                 ) : (

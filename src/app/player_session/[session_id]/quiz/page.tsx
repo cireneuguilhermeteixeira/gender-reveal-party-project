@@ -3,13 +3,22 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { http } from '@/lib/server/httpClient';
-import { ws } from '@/lib/server/ws/wsClient';
-import { isQuizAnswering, isQuizPreparing, isQuizResults, parseOptions, QuestionOptions, SessionWithUsers } from '@/lib/sessionPhase';
-import { WebSocketClient } from '@/lib/server/ws/wsClient';
+import { ws, WebSocketClient } from '@/lib/server/ws/wsClient';
+import {
+  isQuizAnswering,
+  isQuizPreparing,
+  isQuizResults,
+  parseOptions,
+  QuestionOptions,
+  SessionWithUsers,
+} from '@/lib/sessionPhase';
 import StatusBadge from '@/components/StatusBadge';
 
-
-
+// Tema kids
+import AppShellKids from '@/components/AppShellKids';
+import LogoKid from '@/components/LogoKid';
+import Loading from '@/components/Loading';
+import QuestionComponent from '@/components/QuestionsComponent';
 
 export default function PlayerQuiz() {
   const { session_id: sessionId } = useParams<{ session_id: string }>();
@@ -26,30 +35,30 @@ export default function PlayerQuiz() {
   const [submitted, setSubmitted] = useState(false);
 
   const sendingRef = useRef(false);
-  const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null)
-  
+  const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null);
   const router = useRouter();
-  
   const userId = useMemo(
     () => (typeof window !== 'undefined' ? localStorage.getItem('user_id') ?? '' : ''),
     []
   );
 
-  const applySession = useCallback((s: SessionWithUsers) => {
-    if (s.phase.includes('TERMO')) {
-      router.push(`/player_session/${sessionId}/termo`);
-      return;
-    }
+  const applySession = useCallback(
+    (s: SessionWithUsers) => {
+      if (s.phase.includes('TERMO')) {
+        router.push(`/player_session/${sessionId}/termo`);
+        return;
+      }
 
-    setSession(s);
-    setOptions(parseOptions(s.currentQuestion?.options));
-    setSelectedIndex(
-      s.UserAnswer.find(ua => 
-        ua.userId === userId && 
-        ua.questionId === s.currentQuestion?.id
-      )?.selectedIndex ?? null
-    );
-  }, [router, sessionId, userId]);
+      setSession(s);
+      setOptions(parseOptions(s.currentQuestion?.options));
+      setSelectedIndex(
+        s.UserAnswer.find(
+          (ua) => ua.userId === userId && ua.questionId === s.currentQuestion?.id
+        )?.selectedIndex ?? null
+      );
+    },
+    [router, sessionId, userId]
+  );
 
   const fetchSession = useCallback(async () => {
     if (!sessionId) return;
@@ -57,38 +66,38 @@ export default function PlayerQuiz() {
       setErr(null);
       const s = await http.get<SessionWithUsers>(`/session/${sessionId}`);
       applySession(s);
-      
-      const user = s?.User.find(u => u.id === userId);
-      console.log('user:', user);
+
+      const user = s?.User.find((u) => u.id === userId);
       if (!user) {
         setErr('Você não está mais na sala. Tente entrar novamente.');
         setSession(null);
         router.push(`/player_session/${sessionId}`);
         return;
       }
+
       if (sockRef.current) return;
 
       const sock = ws
-      .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })
-      .on('open', () => console.log('[ws] open'))
-      .on('error', (e) => console.warn('[ws] error', e))
-      .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
-      .on('user_joined', ({ user }) => {
-        // fetchSession();
-        console.log('[ws] joined', user);
-      })
-      .on('user_left', ({ userId }) => {
-        // fetchSession();
-        console.log('[ws] left', userId);
-      })
-      .on('phase_changed', ({ phase }) => {
-        fetchSession();
-        console.log('[ws] phase ->', phase);
-      })
-      .open();
+        .connect({
+          path: '/ws',
+          sessionId,
+          userId,
+          name: user?.name || userId,
+          role: 'player',
+          autoReconnect: true,
+        })
+        .on('open', () => console.log('[ws] open'))
+        .on('error', (e) => console.warn('[ws] error', e))
+        .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
+        .on('user_joined', ({ user }) => console.log('[ws] joined', user))
+        .on('user_left', ({ userId }) => console.log('[ws] left', userId))
+        .on('phase_changed', ({ phase }) => {
+          fetchSession();
+          console.log('[ws] phase ->', phase);
+        })
+        .open();
 
       sockRef.current = sock;
-
     } catch {
       setErr('Não foi possível atualizar a sessão agora.');
     } finally {
@@ -100,12 +109,11 @@ export default function PlayerQuiz() {
     fetchSession();
   }, [fetchSession]);
 
-
-  useEffect(() => {   
+  useEffect(() => {
     return () => sockRef.current?.close();
-  }, [])
+  }, []);
 
-  
+
 
   useEffect(() => {
     if (!session) return;
@@ -113,7 +121,6 @@ export default function PlayerQuiz() {
     timerReady.current = false;
 
     if (isQuizAnswering(session.phase)) {
-
       setSubmitted(false);
       setSelectedIndex(null);
 
@@ -129,7 +136,7 @@ export default function PlayerQuiz() {
       return () => clearInterval(id);
     }
     setTimeLeft(null);
-  }, [session?.phase, session?.currentQuestion.id, session]);
+  }, [session?.phase, session?.currentQuestion?.id, session]);
 
   const sendAnswer = useCallback(
     async (optionIndex: number | null, timeTaken: number) => {
@@ -150,7 +157,7 @@ export default function PlayerQuiz() {
         sendingRef.current = false;
       }
     },
-    [sessionId, session?.currentQuestion.id, userId]
+    [sessionId, session?.currentQuestion?.id, userId]
   );
 
   const handleAnswer = useCallback(
@@ -164,15 +171,9 @@ export default function PlayerQuiz() {
     [session, submitted, timeLeft, sendAnswer]
   );
 
-
   useEffect(() => {
     if (!session) return;
-    if (
-      isQuizAnswering(session.phase) &&
-      timerReady.current &&
-      timeLeft === 0 &&
-      !submitted
-    ) {
+    if (isQuizAnswering(session.phase) && timerReady.current && timeLeft === 0 && !submitted) {
       const elapsed = session.currentQuestion?.timeLimit ?? 0;
       setSubmitted(true);
       void sendAnswer(null, Math.max(0, elapsed));
@@ -180,138 +181,108 @@ export default function PlayerQuiz() {
   }, [timeLeft, submitted, session, sendAnswer]);
 
 
-  const baseBg = ['bg-red-600','bg-blue-600','bg-yellow-500','bg-green-600'] as const;
-  const baseHover = ['hover:bg-red-500','hover:bg-blue-500','hover:bg-yellow-400','hover:bg-green-500'] as const;
-  const baseDisabled = ['bg-red-700','bg-blue-700','bg-yellow-600','bg-green-700'] as const;
-  const baseSelected = ['ring-2 ring-red-400','ring-2 ring-blue-400','ring-2 ring-yellow-300','ring-2 ring-green-400'] as const;
-
   const showResultColors = isQuizResults(session?.phase);
   const correctIdx = session?.currentQuestion?.correctIndex ?? -1;
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-3xl space-y-6">
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Quiz</h1>
-          {session?.phase && (
-            <StatusBadge phase={session.phase} />
-          )}
-        </header>
-
-        {err && (
-          <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm">
-            {err}
+    <AppShellKids>
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <LogoKid />
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Quiz</h1>
+            <p className="text-slate-600 text-sm md:text-base">Operação Berço — O Caso do Pequeno Segredo</p>
           </div>
-        )}
+        </div>
+        {session?.phase && <StatusBadge phase={session.phase} />}
+      </header>
 
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60 shadow-xl p-6 md:p-8">
-          {loading || !session ? (
-            <div className="animate-pulse">
-              <div className="h-6 w-2/3 bg-neutral-800 rounded mb-4" />
-              <div className="h-24 bg-neutral-800 rounded mb-4" />
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="h-12 bg-neutral-800 rounded" />
-                <div className="h-12 bg-neutral-800 rounded" />
-                <div className="h-12 bg-neutral-800 rounded" />
-                <div className="h-12 bg-neutral-800 rounded" />
-              </div>
-            </div>
-          ) : (
-            <>
-              {/* pergunta */}
-              <h2 className="text-2xl font-bold mb-3 text-center">
-                {session.currentQuestion?.text ?? '—'}
-              </h2>
+      {err && (
+        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {err}
+        </div>
+      )}
 
-              {/* timer grande */}
-              <div className="mb-5 flex flex-col items-center">
-                {isQuizAnswering(session.phase) ? (
-                  timeLeft !== null && timeLeft > 0 ? (
-                    <>
-                      <p className="text-5xl md:text-6xl font-extrabold text-red-500 animate-pulse leading-none">
-                        {timeLeft}s
-                      </p>
-                      <div className="mt-2 h-2 w-full rounded bg-neutral-800 overflow-hidden">
-                        <div
-                          className="h-2 bg-red-500 transition-[width] duration-1000"
-                          style={{
-                            width: `${
-                              ((timeLeft ?? 0) / (session.currentQuestion?.timeLimit ?? 1)) * 100
-                            }%`,
-                          }}
-                        />
-                      </div>
-                      <p className="text-xs text-neutral-400 mt-1">Tempo restante</p>
-                    </>
-                  ) : (
-                    <p className="text-xl md:text-2xl font-bold text-amber-400">⏰ Tempo esgotado!</p>
-                  )
-                ) : isQuizPreparing(session.phase) ? (
-                  <p className="text-neutral-300">Prepare-se… a contagem vai começar!</p>
-                ) : isQuizResults(session.phase) ? (
+      <section className="mt-6 rounded-3xl border border-white/80 bg-white/80 backdrop-blur-md shadow-xl p-6 md:p-8">
+        {loading || !session ? (
+         <Loading />
+        ) : (
+          <>
+            {/* pergunta */}
+            <h2 className="text-2xl font-bold mb-3 text-center text-slate-800">
+              {session.currentQuestion?.text ?? '—'}
+            </h2>
+
+            {/* timer grande (pastel) */}
+            <div className="mb-5 flex flex-col items-center">
+              {isQuizAnswering(session.phase) ? (
+                timeLeft !== null && timeLeft > 0 ? (
                   <>
-                    {selectedIndex !== null ? (
-                      <p className="font-semibold">
-                        Você escolheu: {options[selectedIndex]}.
-                      </p>
-                    ) : (
-                      <p className="text-yellow-400 font-semibold">Você não respondeu a tempo.</p>
-                    )}
-                    {correctIdx >= 0 && correctIdx < options.length && (
-                      <p className={`font-semibold ${selectedIndex === correctIdx ? 'text-green-400' : 'text-red-400'}`}>
-                        Resposta correta: {options[correctIdx]}.
-                      </p>
-                    )}
+                    <p className="text-5xl md:text-6xl font-extrabold text-rose-500 leading-none animate-pulse">
+                      {timeLeft}s
+                    </p>
+                    <div className="mt-2 h-2 w-full rounded-full bg-slate-100 overflow-hidden">
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-rose-300 via-amber-300 to-sky-300 transition-[width] duration-1000"
+                        style={{
+                          width: `${((timeLeft ?? 0) / (session.currentQuestion?.timeLimit ?? 1)) * 100}%`,
+                        }}
+                      />
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">Tempo restante</p>
                   </>
-                ) : null}
-              </div>
-
-              {/* opções com cores fixas */}
-             {!isQuizPreparing(session.phase) && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {options.map((opt, i) => {
-                  const isSelected = selectedIndex === i;
-                  const disabled =
-                    submitted ||
-                    !isQuizAnswering(session.phase) ||
-                    (timeLeft ?? 0) <= 0;
-
-                  // estilos
-                  const bg = disabled ? baseDisabled[i % 4] : baseBg[i % 4];
-                  const hover = disabled ? '' : baseHover[i % 4];
-                  const ring = isSelected ? baseSelected[i % 4] : '';
-
-                  // em RESULTS: mantenha a cor fixa, mas destaque correta/errada com bordas
-                  let resultRing = '';
-                  if (showResultColors) {
-                    if (i === correctIdx) resultRing = 'ring-2 ring-emerald-400';
-                    else if (isSelected && i !== correctIdx) resultRing = 'ring-2 ring-red-400';
-                  }
-
-                  return (
-                    <button
-                      key={`${i}-${opt}`}
-                      onClick={() => handleAnswer(i)}
-                      disabled={disabled}
-                      className={`px-4 py-3 rounded-xl text-white font-semibold text-left transition ${bg} ${hover} ${ring} ${resultRing}`}
+                ) : (
+                  <p className="text-xl md:text-2xl font-bold text-amber-600">⏰ Tempo esgotado!</p>
+                )
+              ) : isQuizPreparing(session.phase) ? (
+                <p className="text-slate-600">Prepare-se… a contagem vai começar!</p>
+              ) : isQuizResults(session.phase) ? (
+                <>
+                  {selectedIndex !== null ? (
+                    <p className="font-semibold text-slate-700">
+                      Você escolheu: <span className="text-slate-900">{options[selectedIndex]}</span>.
+                    </p>
+                  ) : (
+                    <p className="text-amber-600 font-semibold">Você não respondeu a tempo.</p>
+                  )}
+                  {correctIdx >= 0 && correctIdx < options.length && (
+                    <p
+                      className={`font-semibold ${
+                        selectedIndex === correctIdx ? 'text-emerald-600' : 'text-rose-600'
+                      }`}
                     >
-                      <span className="mr-2 opacity-90">{i + 1})</span>{opt}
-                    </button>
-                  );
-                })}
-              </div>}
+                      Resposta correta: {options[correctIdx]}.
+                    </p>
+                  )}
+                </>
+              ) : null}
+            </div>
 
-              {/* rodapé */}
-              <div className="mt-5 text-center text-sm text-neutral-400">
-                {isQuizAnswering(session.phase) && submitted && (
-                  <span>Sua resposta foi registrada. Aguarde…</span>
-                )}
-                {isQuizPreparing(session.phase) && <span>Aguardando início…</span>}
-                {isQuizResults(session.phase) && <span>O host controla a próxima pergunta.</span>}
-              </div>
-            </>
-          )}
-        </section>
-      </div>
-    </main>
+            {/* opções (4 cores suaves) */}
+            {!isQuizPreparing(session.phase) && (
+              <QuestionComponent
+                options={options}
+                selectedIndex={selectedIndex}
+                handleAnswer={handleAnswer}
+                submitted={submitted}
+                correctIdx={correctIdx}
+                showResultColors={showResultColors}
+                session={session}
+                timeLeft={timeLeft}
+              />
+            )}
+
+            {/* rodapé */}
+            <div className="mt-5 text-center text-sm text-slate-600">
+              {isQuizAnswering(session.phase) && submitted && (
+                <span>Sua resposta foi registrada. Aguarde…</span>
+              )}
+              {isQuizPreparing(session.phase) && <span>Aguardando início…</span>}
+              {isQuizResults(session.phase) && <span>O host controla a próxima pergunta.</span>}
+            </div>
+          </>
+        )}
+      </section>
+    </AppShellKids>
   );
 }

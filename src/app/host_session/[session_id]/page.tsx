@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useState, useCallback, useRef } from 'react';
 import { User } from '@prisma/client';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import { http } from '@/lib/server/httpClient';
-import { ws } from '@/lib/server/ws/wsClient';
+import { ws, WebSocketClient } from '@/lib/server/ws/wsClient';
 import {
   getNextPhase,
   isQuizPreparing,
@@ -18,15 +18,16 @@ import {
   SessionWithUsers,
   QuestionOptions
 } from '@/lib/sessionPhase';
-import { useRouter } from 'next/navigation';
-import { WebSocketClient } from '@/lib/server/ws/wsClient';
+
+import AppShellKids from '@/components/AppShellKids';
+import LogoKid from '@/components/LogoKid';
+import SparkleButton from '@/components/SparkleButton';
+
 import TermoExplanation from '@/components/TermoExplanation';
 import Scoreboard from '@/components/ScoreBoard';
 import WaitingForPlayers from '@/components/WaitingForPlayers';
 import StatusBadge from '@/components/StatusBadge';
-
-
-
+import Loading from '@/components/Loading';
 
 export default function HostHome() {
   const { session_id: sessionId } = useParams<{ session_id: string }>()
@@ -81,7 +82,6 @@ export default function HostHome() {
 
 
   const goToNextPhase = useCallback(async () => {
-    
     if (!sessionId || !session) return
     if (advancingRef.current) return
     advancingRef.current = true
@@ -91,13 +91,13 @@ export default function HostHome() {
       const payload = {
         phase: nextPhase.phase,
         currentQuestionIndex: nextPhase?.currentQuestionIndex,
-        questions: nextPhase?.questions
+        questions: nextPhase?.questions,
       }
 
       const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload)
       applySession(updated)
-      sockRef.current?.sendPhaseChange(updated.phase);
-      // se avançou para RESULTS ou FINAL, atualiza o placar imediatamente
+      sockRef.current?.sendPhaseChange(updated.phase)
+
       if (isQuizResults(updated.phase) || isTermoResults(updated.phase) || isFinalPhase(updated.phase)) {
         fetchSession()
       }
@@ -112,11 +112,10 @@ export default function HostHome() {
     fetchSession()
   }, [fetchSession])
 
- 
+
 
 
   useEffect(() => {
-
     if (sockRef.current) return;
 
     const sock = ws
@@ -136,10 +135,8 @@ export default function HostHome() {
       .open();
 
     sockRef.current = sock;
-
     return () => sockRef.current?.close();
   }, [fetchSession, sessionId])
-
 
   // Timer do QUIZ (somente na fase ANSWERING)
   useEffect(() => {
@@ -163,9 +160,8 @@ export default function HostHome() {
     } else {
       setTimeLeft(null)
     }
-  }, [session?.phase, session?.currentQuestion.id, session, goToNextPhase])
+  }, [session?.phase, session?.currentQuestion?.id, session, goToNextPhase])
 
-  // UI helpers
   const quizStatus = () => {
     if (!session) return null
 
@@ -174,15 +170,20 @@ export default function HostHome() {
     if (isQuizAnswering(session.phase)) {
       if (timeLeft !== null && timeLeft > 0) {
         return (
-          <div className="mt-2 text-center">
-            <p className="text-3xl font-extrabold text-red-500 animate-pulse">{timeLeft}s</p>
-            <p className="text-xs text-neutral-400">Tempo restante</p>
+          <div className="mt-3 text-center">
+            <div className="inline-flex items-center gap-2 rounded-2xl bg-rose-100 text-rose-700 px-3 py-2">
+              <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse" />
+              <p className="text-base font-extrabold">{timeLeft}s</p>
+            </div>
+            <p className="text-xs text-slate-500 mt-1">Tempo restante</p>
           </div>
         )
       }
       return (
-        <div className="mt-2 text-center">
-          <p className="text-lg font-bold text-yellow-400">⏰ Tempo esgotado!</p>
+        <div className="mt-3 text-center">
+          <p className="inline-flex items-center rounded-2xl bg-amber-100 text-amber-700 px-3 py-2 text-sm font-bold">
+            ⏰ Tempo esgotado!
+          </p>
         </div>
       )
     }
@@ -190,144 +191,153 @@ export default function HostHome() {
     if (isQuizResults(session.phase)) {
       const idx = session.currentQuestion?.correctIndex ?? -1
       const ans = idx >= 0 ? options[idx] : undefined
-      return <p className="mt-2 text-base font-semibold text-green-400">Resposta: {ans || '—'}</p>
+      return (
+        <p className="mt-3 text-center">
+          <span className="inline-flex items-center rounded-2xl bg-emerald-100 text-emerald-700 px-3 py-2 text-sm font-semibold">
+            ✅ Resposta: {ans || '—'}
+          </span>
+        </p>
+      )
     }
 
     return null
   }
 
-  // Conteúdo genérico para fases de resposta do TERMO (cada jogador recebe palavra diferente)
+  // Mensagem para TERMO (cada player tem palavra diferente)
   const termoAnsweringNotice = (
-    <div className="rounded-lg border border-indigo-500/30 bg-indigo-500/10 px-4 py-3 text-sm">
-      <p>
-        Rodada do <strong>TERMO</strong> em andamento. Cada participante recebeu uma palavra
-        diferente — acompanhe o tempo e o placar; os acertos rápidos rendem mais pontos.
-      </p>
+    <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
+      Rodada do <strong>TERMO</strong> em andamento. Cada participante recebeu uma palavra diferente —
+      acompanhe o tempo e o placar; acertos rápidos rendem mais pontos.
     </div>
   )
 
   return (
-    <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
-      <div className="w-full max-w-3xl space-y-6">
-        {/* Header */}
-        <header className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Painel do Host — Jogo de Chá Revelação</h1>
-        </header>
+    <AppShellKids>
+      {/* Header */}
+      <header className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <LogoKid />
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Painel do Host</h1>
+            <p className="text-slate-600 text-sm md:text-base">Operação Berço — O Caso do Pequeno Segredo</p>
+          </div>
+        </div>
+      </header>
 
-        {/* Alert */}
-        {err && <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm">{err}</div>}
+      {/* Alert de erro (tema claro) */}
+      {err && (
+        <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
+          {err}
+        </div>
+      )}
 
-        {/* Card principal */}
-        <section className="rounded-2xl border border-neutral-800 bg-neutral-900/60 shadow-xl">
-          {loading ? (
-            <div className="p-8 animate-pulse">
-              <div className="h-6 w-2/3 bg-neutral-800 rounded mb-4"></div>
-              <div className="space-y-2">
-                <div className="h-10 bg-neutral-800 rounded"></div>
-                <div className="h-10 bg-neutral-800 rounded"></div>
-                <div className="h-10 bg-neutral-800 rounded"></div>
-                <div className="h-10 bg-neutral-800 rounded"></div>
-              </div>
-              <div className="h-4 w-1/3 bg-neutral-800 rounded mt-6"></div>
-            </div>
-          ) : !session ? (
-            <div className="p-8">Sessão não encontrada.</div>
-          ) : (
-            <div className="p-6 md:p-8">
-              {session.phase === 'WAITING_FOR_PLAYERS' ? (
-               <WaitingForPlayers
+      {/* Card principal */}
+      <section className="mt-6 rounded-3xl border border-white/80 bg-white/80 backdrop-blur-md shadow-xl">
+        {loading ? (
+         <Loading/>
+        ) : !session ? (
+          <div className="p-8">Sessão não encontrada.</div>
+        ) : (
+          <div className="p-6 md:p-8">
+            {session.phase === 'WAITING_FOR_PLAYERS' ? (
+              <WaitingForPlayers
                 advancingRef={advancingRef}
                 copyToClipboard={copyToClipboard}
                 copied={copied}
                 goToNextPhase={goToNextPhase}
                 sessionLink={sessionLink}
                 users={users}
-               />
-              ) : (
-                <>
-                  {/* status badge */}
+              />
+            ) : (
+              <>
+                {/* status badge (seu componente atual) */}
+                <div className="mb-3">
                   <StatusBadge phase={session.phase} />
+                </div>
 
-                  {session.phase.includes('QUIZ') ? (
-                    <>
-                      <h2 className="text-2xl font-bold mb-4">{session.currentQuestion?.text || '—'}</h2>
+                {/* Conteúdo de QUIZ */}
+                {session.phase.includes('QUIZ') ? (
+                  <>
+                    <h2 className="text-2xl font-bold mb-3">{session.currentQuestion?.text || '—'}</h2>
 
-                      {!isQuizPreparing(session.phase) && <div className="space-y-3">
+                    {!isQuizPreparing(session.phase) && (
+                      <div className="space-y-3">
                         {options.map((opt, i) => (
-                          <div key={`${i}-${opt}`} className="rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-3">
+                          <div
+                            key={`${i}-${opt}`}
+                            className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
+                          >
                             <p className="font-medium">
                               {i + 1}) <span className="font-semibold">{opt}</span>
                             </p>
                           </div>
                         ))}
-                      </div>}
+                      </div>
+                    )}
 
-                      <div className="mt-4">{quizStatus()}</div>
+                    {quizStatus()}
 
-                      {(isQuizResults(session.phase) || isFinalPhase(session.phase)) && (
-                        <>
-                          {isFinalPhase(session.phase) ? (
+                    {(isQuizResults(session.phase) || isFinalPhase(session.phase)) && (
+                      <>
+                        {isFinalPhase(session.phase) ? (
+                          <div className="mt-6">
                             <Scoreboard title="Placar final" session={session} />
-                          ) : (
-                            <>
-                              <Scoreboard title="Parcial geral" session={session} />
-                            </>
-                          )}
-                        </>
-                      )}
-                    </>
-                  ) : (
-                    <>
-                      {isTermoPreparing(session.phase) && (
-                        <TermoExplanation/>
-                      )}
+                          </div>
+                        ) : (
+                          <div className="mt-6">
+                            <Scoreboard title="Parcial geral" session={session} />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                ) : (
+                  /* Conteúdo de TERMO */
+                  <>
+                    {isTermoPreparing(session.phase) && <TermoExplanation />}
 
-                      {isTermoAnswering(session.phase) && <div className="mt-3">{termoAnsweringNotice}</div>}
+                    {isTermoAnswering(session.phase) && termoAnsweringNotice}
 
-                      {(isTermoResults(session.phase) || isFinalPhase(session.phase)) && (
-                        <>
-                          {isFinalPhase(session.phase) ? (
-                            <>
-                              <Scoreboard title="Placar final" session={session} />
-                              <div className="mt-6 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-center">
-                                <p className="text-emerald-300 font-semibold">
-                                  🎉 Preparando para mostrar a resposta do chá revelação…
-                                </p>
-                                <p className="text-white/70 text-sm mt-1">Confirme quando todos estiverem prontos!</p>
-                              </div>
-                            </>
-                          ) : (
-                            <>
-                              <Scoreboard title="Parcial geral" session={session} />
-                            </>
-                          )}
-                        </>
-                      )}
-                    </>
-                  )}
+                    {(isTermoResults(session.phase) || isFinalPhase(session.phase)) && (
+                      <>
+                        {isFinalPhase(session.phase) ? (
+                          <div className="mt-6">
+                            <Scoreboard title="Placar final" session={session} />
+                            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
+                              <p className="text-emerald-700 font-semibold">
+                                🎉 Preparando para mostrar a resposta do chá revelação…
+                              </p>
+                              <p className="text-slate-600 text-sm mt-1">
+                                Confirme quando todos estiverem prontos!
+                              </p>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="mt-6">
+                            <Scoreboard title="Parcial geral" session={session} />
+                          </div>
+                        )}
+                      </>
+                    )}
+                  </>
+                )}
 
-                  <div className="mt-6 flex items-center justify-between gap-3">
-                    <div className="text-sm text-neutral-300">
-                      {isTermoAnswering(session.phase) && 'Rodada em andamento…'}
-                      {isTermoResults(session.phase) && 'Resultado da rodada exibido.'}
-                      {isFinalPhase(session.phase) && 'Jogo encerrado.'}
-                    </div>
-                    <button onClick={goToNextPhase} disabled={advancingRef.current} className="inline-flex items-center gap-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 disabled:opacity-60 px-5 py-3 font-semibold transition">
-                      {advancingRef.current && (
-                        <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                          <path className="opacity-75" d="M4 12a8 8 0 018-8v4" fill="currentColor" />
-                        </svg>
-                      )}
-                      Avançar
-                    </button>
+                {/* Rodapé de ação */}
+                <div className="mt-6 flex items-center justify-between gap-3">
+                  <div className="text-sm text-slate-600">
+                    {isTermoAnswering(session.phase) && 'Rodada em andamento…'}
+                    {isTermoResults(session.phase) && 'Resultado da rodada exibido.'}
+                    {isFinalPhase(session.phase) && 'Jogo encerrado.'}
                   </div>
-                </>
-              )}
-            </div>
-          )}
-        </section>
-      </div>
-    </main>
+                  <SparkleButton onClick={goToNextPhase} disabled={advancingRef.current}>
+                    {advancingRef.current ? 'Avançando…' : 'Avançar'}
+                  </SparkleButton>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </section>
+    </AppShellKids>
   )
 }
