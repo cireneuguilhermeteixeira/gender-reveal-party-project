@@ -28,6 +28,7 @@ import Scoreboard from '@/components/ScoreBoard';
 import WaitingForPlayers from '@/components/WaitingForPlayers';
 import StatusBadge from '@/components/StatusBadge';
 import Loading from '@/components/Loading';
+import FinalRevelation from '@/components/FinalRevelation';
 
 export default function HostHome() {
   const { session_id: sessionId } = useParams<{ session_id: string }>()
@@ -301,19 +302,12 @@ export default function HostHome() {
                     {(isTermoResults(session.phase) || isFinalPhase(session.phase)) && (
                       <>
                         {isFinalPhase(session.phase) ? (
-                          <div className="mt-6">
+                          <div className="mt-12">
+                            <FinalRevelation isHost={true}/>
                             <Scoreboard title="Placar final" session={session} />
-                            <div className="mt-6 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-center">
-                              <p className="text-emerald-700 font-semibold">
-                                🎉 Preparando para mostrar a resposta do chá revelação…
-                              </p>
-                              <p className="text-slate-600 text-sm mt-1">
-                                Confirme quando todos estiverem prontos!
-                              </p>
-                            </div>
                           </div>
                         ) : (
-                          <div className="mt-6">
+                          <div className="mt-12">
                             <Scoreboard title="Parcial geral" session={session} />
                           </div>
                         )}
@@ -329,9 +323,9 @@ export default function HostHome() {
                     {isTermoResults(session.phase) && 'Resultado da rodada exibido.'}
                     {isFinalPhase(session.phase) && 'Jogo encerrado.'}
                   </div>
-                  <SparkleButton onClick={goToNextPhase} disabled={advancingRef.current}>
+                 {!isFinalPhase(session.phase) && <SparkleButton onClick={goToNextPhase} disabled={advancingRef.current}>
                     {advancingRef.current ? 'Avançando…' : 'Avançar'}
-                  </SparkleButton>
+                  </SparkleButton>}
                 </div>
               </>
             )}
