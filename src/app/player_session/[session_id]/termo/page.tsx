@@ -13,7 +13,6 @@ import StatusBadge from '@/components/StatusBadge'
 import AppShellKids from '@/components/AppShellKids'
 import LogoKid from '@/components/LogoKid'
 import SparkleButton from '@/components/SparkleButton'
-import FinalRevelation from '@/components/FinalRevelation'
 
 type SessionWithUsers = Prisma.SessionGetPayload<{
   include: { User: true; UserAnswer: true; currentQuestion: true }
@@ -57,7 +56,7 @@ export default function TermoPage() {
   const [session, setSession] = useState<SessionWithUsers | null>(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
-  const [gender, setGender] = useState<string | undefined>(undefined);
+  const [, setGender] = useState<string | undefined>(undefined);
   const [word, setWord] = useState<string>('') // palavra oculta
   const [wordIndex, setWordIndex] = useState<number | null>(null)
   const [currentAttempt, setCurrentAttempt] = useState('')
@@ -106,13 +105,18 @@ export default function TermoPage() {
     fetchSession()
   }, [fetchSession])
 
+
+  const fetchRef = useRef(fetchSession);
+    useEffect(() => { fetchRef.current = fetchSession }, [fetchSession]);
+
+
   useEffect(() => {
     if (!sessionId || !userId) return;
     if (sockRef.current) return;
 
-    const user = session?.User.find(u => u.id === userId)
+    const name = localStorage.getItem('quiz-name');
     const sock = ws
-      .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })
+      .connect({ path: '/ws', sessionId, userId, name: name|| userId, role: 'player', autoReconnect: true })
       .on('open', () => console.log('[ws] open'))
       .on('error', (e) => console.warn('[ws] error', e))
       .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
@@ -120,19 +124,23 @@ export default function TermoPage() {
         console.log('[ws] gender revealed', gender);
         setGender(gender);
       })
-      .on('user_joined', () => fetchSession())
-      .on('user_left',   () => fetchSession())
-      .on('phase_changed', () => fetchSession())
+      .on('user_joined', ({ user }) => {
+        if (user.userId !== userId) fetchRef.current();
+      })
+      .on('user_left',   ({ userId: userIdLeft }) => {
+        if (userIdLeft !== userId) fetchRef.current();
+      })
+      .on('phase_changed', () => fetchRef.current())
       .open()
 
     sockRef.current = sock
-    return () => {
-      if (sockRef.current) {
-        sockRef.current.close();
-        sockRef.current = null;
-      }
-    };
-  }, [fetchSession, session?.User, sessionId, userId])
+  }, [sessionId, userId])
+
+
+   useEffect(() => {
+    return () => sockRef.current?.close();
+  }, []);
+
 
   const requestNewWord = useCallback(
     async (phase: Phase | undefined) => {
@@ -510,7 +518,6 @@ export default function TermoPage() {
           <Card className="mt-6 text-center">
             {isFinalPhase(session.phase) ? (
               <>
-                <FinalRevelation gender={gender} />
                 <Scoreboard title="Placar final" session={session} highlightUserId={userId} />
               </>
             ) : (
