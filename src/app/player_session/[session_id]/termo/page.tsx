@@ -57,7 +57,7 @@ export default function TermoPage() {
   const [session, setSession] = useState<SessionWithUsers | null>(null)
   const [loading, setLoading] = useState(true)
   const [err, setErr] = useState<string | null>(null)
-
+  const [gender, setGender] = useState<string | undefined>(undefined);
   const [word, setWord] = useState<string>('') // palavra oculta
   const [wordIndex, setWordIndex] = useState<number | null>(null)
   const [currentAttempt, setCurrentAttempt] = useState('')
@@ -101,6 +101,10 @@ export default function TermoPage() {
       .on('open', () => console.log('[ws] open'))
       .on('error', (e) => console.warn('[ws] error', e))
       .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
+      .on('gender_revealed', ({ gender: genderFromServer }: { gender: string }) => {
+        console.log("[ws]: gender revealed", genderFromServer);
+        setGender(genderFromServer);
+      })
       .on('user_joined', () => fetchSession())
       .on('user_left',   () => fetchSession())
       .on('phase_changed', () => fetchSession())
@@ -485,7 +489,7 @@ export default function TermoPage() {
             {isFinalPhase(session.phase) ? (
               <>
                 <div className="mb-6">
-                  <FinalRevelation />
+                  <FinalRevelation gender={gender} />
                 </div>
                 <Scoreboard title="Placar final" session={session} highlightUserId={userId} />
               </>

@@ -4,9 +4,10 @@ import SparkleButton from "./SparkleButton";
 type FinalRevelationProps = {
     isHost?: boolean;
     onReveal?: () => void;
+    gender: string | undefined;
 }
 
-function FinalRevelation({ isHost, onReveal }: FinalRevelationProps) {
+function FinalRevelation({ isHost, onReveal, gender }: FinalRevelationProps) {
 
     const [revealStarted, setRevealStarted] = useState(false);
     const [revealCountdown, setRevealCountdown] = useState(10);
@@ -22,12 +23,6 @@ function FinalRevelation({ isHost, onReveal }: FinalRevelationProps) {
     [revealCountdown, revealSteps.length]
     )
 
-    // Sexo do bebê (placeholder)
-    const [gender, ] = useState<'boy' | 'girl'>('boy')
-    // Para trocar: descomente a linha abaixo e comente a de cima
-    // const [gender, ] = useState<'boy' | 'girl'>('girl')
-
-
     // Contagem da revelação final
     useEffect(() => {
     if (!revealStarted) return
@@ -41,7 +36,6 @@ function FinalRevelation({ isHost, onReveal }: FinalRevelationProps) {
         setRevealCountdown(10);
         localStorage.clear();
         if (onReveal) onReveal();
-
     }
 
     return (
@@ -52,7 +46,7 @@ function FinalRevelation({ isHost, onReveal }: FinalRevelationProps) {
                 Com todas as pistas coletadas, estamos prontos para o grande momento.
             </p>
             <p className="text-slate-600 text-sm mt-1">
-                Ao continuar, iniciaremos a contagem para revelar o segredo!
+                Iniciaremos a contagem para revelar o segredo!
             </p>
             <div className="mt-4">
                {isHost && <SparkleButton onClick={revealSecret}>

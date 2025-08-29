@@ -102,6 +102,17 @@ app.prepare().then(() => {
           });
           break;
         }
+        case 'gender_reveal': {
+          console.log("entrou aqui oh gender_reveal", msg);
+          if (!msg.sessionId || !msg.userId || !msg.gender) return;
+          broadcast(msg.sessionId, {
+            type: 'gender_revealed',
+            sessionId: msg.sessionId,
+            gender: msg.gender,
+            by: msg.userId
+          });
+          break;
+        }
         case 'ping': {
           try { ws.send(encode({ type: 'ack' })); } catch {}
           break;

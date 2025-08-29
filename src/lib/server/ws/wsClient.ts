@@ -17,6 +17,7 @@ export type ClientToServer =
   | { type: 'join'; sessionId: string; userId: string; name?: string; role: Role }
   | { type: 'leave'; sessionId: string; userId: string }
   | { type: 'phase_change'; sessionId: string; userId: string; phase: string }
+  | { type: 'gender_reveal'; sessionId: string; userId: string; gender: string }
   | { type: 'ping'; sessionId?: string }
 
 export type ServerToClient =
@@ -24,6 +25,7 @@ export type ServerToClient =
   | { type: 'user_joined'; sessionId: string; user: UserSummary }
   | { type: 'user_left'; sessionId: string; userId: string }
   | { type: 'phase_changed'; sessionId: string; phase: string; by: string }
+  | { type: 'gender_revealed'; sessionId: string; gender: string; by: string }
   | { type: 'room_snapshot'; sessionId: string; room: RoomSnapshot }
   | { type: 'ack' }
   | { type: 'error'; message: string }
@@ -57,6 +59,7 @@ export type WSEventHandlers = {
   user_joined: (m: Extract<ServerToClient, { type: 'user_joined' }>) => void
   user_left: (m: Extract<ServerToClient, { type: 'user_left' }>) => void
   phase_changed: (m: Extract<ServerToClient, { type: 'phase_changed' }>) => void
+  gender_revealed: (m: Extract<ServerToClient, { type: 'gender_revealed' }>) => void
   room_snapshot: (m: Extract<ServerToClient, { type: 'room_snapshot' }>) => void
   ack: () => void
   // fallback for any valid message
@@ -145,6 +148,7 @@ export class ManagedSocket {
         case 'user_joined': this.handlers.user_joined?.(msg); break
         case 'user_left': this.handlers.user_left?.(msg); break
         case 'phase_changed': this.handlers.phase_changed?.(msg); break
+        case 'gender_revealed': this.handlers.gender_revealed?.(msg); break
         case 'room_snapshot': this.handlers.room_snapshot?.(msg); break
         case 'ack': this.handlers.ack?.(); break
         case 'error': this.handlers.error?.(msg.message); break
@@ -180,6 +184,10 @@ export class ManagedSocket {
     this.send({ type: 'phase_change', sessionId: this.opts.sessionId, userId: this.opts.userId, phase })
   }
 
+  sendGenderReveal(gender: string) {
+    this.send({ type: 'gender_reveal', sessionId: this.opts.sessionId, userId: this.opts.userId, gender  })
+  }
+
   send(raw: ClientToServer) {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(encode(raw))
   }
@@ -209,53 +217,4 @@ export class ManagedSocket {
 // Factory with your base URL, like your HttpClient('/api')
 export const ws = new WebSocketClient('/api')
 
-/* ------------------------ Usage (Host example) ------------------------------
-import { useEffect, useRef } from 'react'
-import { gameWS } from '@/lib/ws/GameWebSocketClient'
 
-export function HostSocket({ sessionId, userId, name }: { sessionId: string; userId: string; name?: string }) {
-  const sockRef = useRef<ReturnType<typeof gameWS.connect> | null>(null)
-
-  useEffect(() => {
-    const sock = gameWS
-      .connect({ path: '/ws', sessionId, userId, role: 'host', name, autoReconnect: true })
-      .on('open', () => console.log('[ws] open'))
-      .on('error', (e) => console.warn('[ws] error', e))
-      .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
-      .on('user_joined', ({ user }) => console.log('[ws] joined', user))
-      .on('user_left', ({ userId }) => console.log('[ws] left', userId))
-      .on('phase_changed', ({ phase }) => console.log('[ws] phase ->', phase))
-      .open()
-
-    sockRef.current = sock
-    return () => sockRef.current?.close()
-  }, [sessionId, userId, name])
-
-  return (
-    <button onClick={() => sockRef.current?.sendPhaseChange('QUIZ_ANSWERING')} className="rounded bg-indigo-600 text-white px-3 py-2">
-      Mudar fase para QUIZ_ANSWERING
-    </button>
-  )
-}
-*/
-
-/* ------------------------ Usage (Player example) ----------------------------
-import { useEffect } from 'react'
-import { gameWS } from '@/lib/ws/GameWebSocketClient'
-
-export function PlayerSocket({ sessionId, userId, name }: { sessionId: string; userId: string; name?: string }) {
-  useEffect(() => {
-    const sock = gameWS
-      .connect({ path: '/ws', sessionId, userId, role: 'player', name, autoReconnect: true })
-      .on('open', () => console.log('[ws] open'))
-      .on('phase_changed', ({ phase }) => console.log('[ws] phase ->', phase))
-      .on('user_joined', ({ user }) => console.log('[ws] joined', user))
-      .on('user_left', ({ userId }) => console.log('[ws] left', userId))
-      .open()
-
-    return () => sock.close()
-  }, [sessionId, userId, name])
-
-  return null
-}
-*/

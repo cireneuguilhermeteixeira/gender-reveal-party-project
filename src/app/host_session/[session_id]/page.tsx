@@ -38,6 +38,7 @@ export default function HostHome() {
   const [copied, setCopied] = useState(false);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState<string | null>(null);
+  const [gender, setGender] = useState<'boy' | 'girl' | undefined>(undefined);
 
   // timers
   const [quizTimeLeft, setQuizTimeLeft] = useState<number | null>(null);
@@ -257,18 +258,25 @@ export default function HostHome() {
     </div>
   );
 
-  // WS: emitir evento reveal_gender para sincronizar players
-  const emitRevealGender = useCallback(() => {
-    const payload = { type: 'reveal_gender', sessionId, userId: '0' };
-    // Tenta helpers conhecidos do seu cliente:
-    // @ts-expect-error métodos opcionais
-    if (sockRef.current?.sendCustom) sockRef.current.sendCustom(payload);
-    // @ts-expect-error métodos opcionais
-    else if (sockRef.current?.sendJson) sockRef.current.sendJson(payload);
-    // @ts-expect-error acesso raw opcional
-    else sockRef.current?.socket?.send?.(JSON.stringify(payload));
-    console.log('[ws] reveal_gender emitido');
-  }, [sessionId]);
+
+
+
+  const emitRevealGender = useCallback(async () => {
+
+    try {
+        const data = await http.get<{gender: string}>('/gender');
+        if (data?.gender === 'boy' || data?.gender === 'girl') {
+          setGender(data.gender);
+          console.log('[ws] reveal_gender emitido', data.gender);
+          if (sockRef.current?.sendPhaseChange) sockRef.current.sendPhaseChange(data.gender ?? '');
+        }
+      } catch {
+        // silencioso
+      } finally {
+        setLoading(false);
+      }
+
+  }, []);
 
   return (
     <AppShellKids>
@@ -365,7 +373,7 @@ export default function HostHome() {
                       <div className="w-full flex flex-col items-center">
                         {isFinalPhase(session.phase) ? (
                           <>
-                            <FinalRevelation isHost onReveal={emitRevealGender} />
+                            <FinalRevelation gender={gender} isHost onReveal={emitRevealGender} />
                             <Scoreboard title="Placar final" session={session} />
                           </>
                         ) : (
