@@ -3,14 +3,13 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev --turbopack",
+    "dev": "npx ts-node server.ts",
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "prisma:generate": "prisma generate",
     "prisma:migrate:deploy": "prisma migrate deploy",
-    "heroku-postbuild": "npm run prisma:generate && npm run build",
-    "prepare": "next-ws patch"
+    "heroku-postbuild": "npm run prisma:generate && npm run build"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
@@ -18,12 +17,9 @@
   "dependencies": {
     "@prisma/client": "^5.9.1",
     "next": "15.4.5",
-    "next-ws": "^2.0.14",
     "qrcode": "^1.5.2",
     "react": "19.1.0",
     "react-dom": "19.1.0",
-    "socket.io": "^4.7.5",
-    "socket.io-client": "^4.7.5",
     "ws": "^8.18.3"
   },
   "devDependencies": {
