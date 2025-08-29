@@ -1,5 +1,9 @@
 import type { WebSocket } from 'ws';
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+
+console.log('[ws] route loaded');
 
 
 // Mensagens tipadas (resumo)
@@ -61,6 +65,9 @@ export function SOCKET(
   // request: import("http").IncomingMessage,
   // server: import("ws").WebSocketServer
 ){ 
+
+  console.log('[ws] client connected');
+
   let currentSession: string | null = null;
   let currentUser: string | null = null;
 
