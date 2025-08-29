@@ -5,7 +5,7 @@ import { stripAccents } from '@/lib/utils'
 import { http } from '@/lib/server/httpClient'
 import { ws, WebSocketClient } from '@/lib/server/ws/wsClient'
 import { Phase, Prisma } from '@prisma/client'
-import { useParams } from 'next/navigation'
+import { useParams, useRouter } from 'next/navigation'
 import { isTermoAnswering, isTermoPreparing, isTermoResults } from '@/lib/sessionPhase'
 import TermoExplanation from '@/components/TermoExplanation'
 import Scoreboard from '@/components/ScoreBoard'
@@ -68,6 +68,7 @@ export default function TermoPage() {
   const [alertMsg, setAlertMsg] = useState<string | null>(null)
   const postingRef = useRef(false)
   const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null)
+  const router = useRouter();
 
   const userId = useMemo(
     () => (typeof window !== 'undefined' ? localStorage.getItem('user_id') ?? '' : ''),
@@ -80,30 +81,44 @@ export default function TermoPage() {
     if (!sessionId) return
     try {
       setErr(null)
-      const s = await http.get<SessionWithUsers>(`/session/${sessionId}`)
-      setSession(s)
+      const s = await http.get<SessionWithUsers>(`/session/${sessionId}`);
+       if (s.phase.includes('QUIZ')) {
+        router.push(`/player_session/${sessionId}/quiz`);
+        return;
+      }
+
+      const user = s?.User.find((u) => u.id === userId);
+      if (!user) {
+        setErr('Você não está mais na sala. Tente entrar novamente.');
+        setSession(null);
+        router.push(`/player_session/${sessionId}`);
+        return;
+      }
+      setSession(s);
     } catch {
       setErr('Falha ao carregar sessão.')
     } finally {
       setLoading(false)
     }
-  }, [sessionId])
+  }, [router, sessionId, userId])
 
   useEffect(() => {
     fetchSession()
   }, [fetchSession])
 
   useEffect(() => {
-    if (sockRef.current || !sessionId) return
+    if (!sessionId || !userId) return;
+    if (sockRef.current) return;
+
     const user = session?.User.find(u => u.id === userId)
     const sock = ws
       .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })
       .on('open', () => console.log('[ws] open'))
       .on('error', (e) => console.warn('[ws] error', e))
       .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
-      .on('gender_revealed', ({ gender: genderFromServer }: { gender: string }) => {
-        console.log("[ws]: gender revealed", genderFromServer);
-        setGender(genderFromServer);
+      .on('gender_revealed', ({ gender }) => {
+        console.log('[ws] gender revealed', gender);
+        setGender(gender);
       })
       .on('user_joined', () => fetchSession())
       .on('user_left',   () => fetchSession())
@@ -111,7 +126,12 @@ export default function TermoPage() {
       .open()
 
     sockRef.current = sock
-    return () => sockRef.current?.close()
+    return () => {
+      if (sockRef.current) {
+        sockRef.current.close();
+        sockRef.current = null;
+      }
+    };
   }, [fetchSession, session?.User, sessionId, userId])
 
   const requestNewWord = useCallback(
@@ -155,6 +175,31 @@ export default function TermoPage() {
     if (isTermoAnswering(session.phase)) requestNewWord(session.phase).catch(() => setErr('Falha ao sortear palavra.'))
   }, [requestNewWord, session, session?.phase])
 
+
+   const submitIfNeeded = useCallback(
+    async (justWon: boolean) => {
+      if (postingRef.current) return
+      postingRef.current = true
+      try {
+        if (!userId || !session || wordIndex == null) return
+        const timeTaken = Math.max(0, TERM_TIMER_SECONDS - timeLeft)
+        await http.post('/user-answers', {
+          answerType: 'termo',
+          userId,
+          sessionId: session.id,
+          timeTaken,
+          termoWordIndex: wordIndex,
+          justWon,
+          attempts
+        })
+      } catch (e) {
+        console.error('submit termo failed', e)
+      }
+    },
+    [attempts, session, timeLeft, userId, wordIndex]
+  )
+
+
   // Timer
   useEffect(() => {
     if (!session || !isTermoAnswering(session.phase)) return
@@ -166,8 +211,7 @@ export default function TermoPage() {
     }
     const t = setTimeout(() => setTimeLeft(tl => tl - 1), 1000)
     return () => clearTimeout(t)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.phase, timeLeft, won])
+  }, [session, session?.phase, submitIfNeeded, timeLeft, won])
 
   // Cores
   const letterColor = useCallback(
@@ -207,28 +251,6 @@ export default function TermoPage() {
     return status
   }, [attempts, colorsByRow])
 
-  const submitIfNeeded = useCallback(
-    async (justWon: boolean) => {
-      if (postingRef.current) return
-      postingRef.current = true
-      try {
-        if (!userId || !session || wordIndex == null) return
-        const timeTaken = Math.max(0, TERM_TIMER_SECONDS - timeLeft)
-        await http.post('/user-answers', {
-          answerType: 'termo',
-          userId,
-          sessionId: session.id,
-          timeTaken,
-          termoWordIndex: wordIndex,
-          justWon,
-          attempts
-        })
-      } catch (e) {
-        console.error('submit termo failed', e)
-      }
-    },
-    [attempts, session, timeLeft, userId, wordIndex]
-  )
 
   const commitAttempt = useCallback(() => {
     if (disabled) return
@@ -485,18 +507,16 @@ export default function TermoPage() {
             </p>
           </Card>
 
-          <div className="mt-6 w-full max-w-3xl mx-auto">
+          <Card className="mt-6 text-center">
             {isFinalPhase(session.phase) ? (
               <>
-                <div className="mb-6">
-                  <FinalRevelation gender={gender} />
-                </div>
+                <FinalRevelation gender={gender} />
                 <Scoreboard title="Placar final" session={session} highlightUserId={userId} />
               </>
             ) : (
               <Scoreboard title="Placar atual" session={session} highlightUserId={userId} />
             )}
-          </div>
+          </Card>
         </>
       )}
     </AppShellKids>

@@ -21,7 +21,7 @@ function AppShellKids({ children }: { children: React.ReactNode }) {
 
       <footer className="relative mx-auto max-w-6xl px-4 pt-6 pb-10 text-sm text-slate-500">
         <div className="rounded-2xl border border-white/70 bg-white/70 backdrop-blur-md px-4 py-3 shadow-sm">
-          Operação Berço — O Caso do Pequeno Segredo · <span className="font-medium">v1.0</span>
+          Operação Berço — O Caso do Pequeno Segredo· <span className="font-medium">v1.0</span>
         </div>
       </footer>
 

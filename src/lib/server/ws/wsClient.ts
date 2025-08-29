@@ -159,9 +159,14 @@ export class ManagedSocket {
     this.ws.onerror = () => this.handlers.error?.('WebSocket error')
 
     this.ws.onclose = (evt) => {
-      this.stopHeartbeat()
-      this.handlers.close?.(evt)
-      if (!this.manuallyClosed && this.opts.autoReconnect && this.retries < this.opts.maxRetries) {
+      this.stopHeartbeat();
+      this.handlers.close?.(evt);
+
+      const wasReplaced =
+        evt?.code === 4000 || (evt?.reason || '').includes('replaced_by_new_connection');
+
+
+      if (!this.manuallyClosed && !wasReplaced  && this.opts.autoReconnect && this.retries < this.opts.maxRetries) {
         const delay = this.backoffMs(this.retries++)
         setTimeout(() => this.open(), delay)
       }
