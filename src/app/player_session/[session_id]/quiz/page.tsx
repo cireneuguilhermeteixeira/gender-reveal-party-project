@@ -192,7 +192,7 @@ export default function PlayerQuiz() {
     <main className="min-h-screen bg-neutral-950 text-neutral-100 flex items-center justify-center p-6">
       <div className="w-full max-w-3xl space-y-6">
         <header className="flex items-center justify-between">
-          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Quiz — Jogador</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold tracking-tight">Quiz</h1>
           {session?.phase && (
             <StatusBadge phase={session.phase} />
           )}
