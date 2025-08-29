@@ -86,6 +86,8 @@ export default function TermoPage() {
   }, [fetchSession])
 
   useEffect(() => {
+
+    if (sockRef.current) return;
     const user = session?.User.find(u => u.id === userId);
     const sock = ws
       .connect({ path: '/ws', sessionId, userId, name: user?.name || userId, role: 'player', autoReconnect: true })

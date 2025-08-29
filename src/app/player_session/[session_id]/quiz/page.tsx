@@ -57,7 +57,7 @@ export default function PlayerQuiz() {
       setErr(null);
       const s = await http.get<SessionWithUsers>(`/session/${sessionId}`);
       applySession(s);
-
+      
       const user = s?.User.find(u => u.id === userId);
       console.log('user:', user);
       if (!user) {
