@@ -1,7 +1,12 @@
 import { useEffect, useMemo, useState } from "react";
 import SparkleButton from "./SparkleButton";
 
-function FinalRevelation({ isHost }: { isHost?: boolean }) {
+type FinalRevelationProps = {
+    isHost?: boolean;
+    onReveal?: () => void;
+}
+
+function FinalRevelation({ isHost, onReveal }: FinalRevelationProps) {
 
     const [revealStarted, setRevealStarted] = useState(false);
     const [revealCountdown, setRevealCountdown] = useState(10);
@@ -31,6 +36,13 @@ function FinalRevelation({ isHost }: { isHost?: boolean }) {
     return () => clearInterval(id)
     }, [revealStarted, revealCountdown])
 
+    const revealSecret = () => {
+        setRevealStarted(true);
+        setRevealCountdown(10);
+        localStorage.clear();
+        if (onReveal) onReveal();
+
+    }
 
     return (
       <section className="w-full max-w-2xl mt-6 rounded-3xl border border-sky-200 bg-sky-50 p-5 text-center shadow">
@@ -43,7 +55,7 @@ function FinalRevelation({ isHost }: { isHost?: boolean }) {
                 Ao continuar, iniciaremos a contagem para revelar o segredo!
             </p>
             <div className="mt-4">
-               {isHost && <SparkleButton onClick={() => { setRevealStarted(true); setRevealCountdown(10); }}>
+               {isHost && <SparkleButton onClick={revealSecret}>
                 Revelar segredo
                 </SparkleButton>}
             </div>

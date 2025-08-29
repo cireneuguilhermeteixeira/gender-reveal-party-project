@@ -22,7 +22,6 @@ import {
 import AppShellKids from '@/components/AppShellKids';
 import LogoKid from '@/components/LogoKid';
 import SparkleButton from '@/components/SparkleButton';
-
 import TermoExplanation from '@/components/TermoExplanation';
 import Scoreboard from '@/components/ScoreBoard';
 import WaitingForPlayers from '@/components/WaitingForPlayers';
@@ -31,91 +30,91 @@ import Loading from '@/components/Loading';
 import FinalRevelation from '@/components/FinalRevelation';
 
 export default function HostHome() {
-  const { session_id: sessionId } = useParams<{ session_id: string }>()
+  const { session_id: sessionId } = useParams<{ session_id: string }>();
 
-  const [session, setSession] = useState<SessionWithUsers | null>(null)
-  const [users, setUsers] = useState<User[]>([])
-  const [options, setOptions] = useState<QuestionOptions>([])
-  const [copied, setCopied] = useState(false)
-  const [loading, setLoading] = useState(true)
-  const [err, setErr] = useState<string | null>(null)
-  const [timeLeft, setTimeLeft] = useState<number | null>(null)
-  const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null)
-  const advancingRef = useRef(false) // evita requisições duplicadas
+  const [session, setSession] = useState<SessionWithUsers | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [options, setOptions] = useState<QuestionOptions>([]);
+  const [copied, setCopied] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState<string | null>(null);
+
+  // timers
+  const [quizTimeLeft, setQuizTimeLeft] = useState<number | null>(null);
+  const [termoTimeLeft, setTermoTimeLeft] = useState<number | null>(null);
+
+  const sockRef = useRef<ReturnType<WebSocketClient['connect']> | null>(null);
+  const advancingRef = useRef(false);
   const router = useRouter();
 
-  const origin = typeof window !== 'undefined' ? window.location.origin : ''
-  const sessionLink = useMemo(() => (!sessionId ? '' : `${origin}/player_session/${sessionId}`), [sessionId, origin])
+  const origin = typeof window !== 'undefined' ? window.location.origin : '';
+  const sessionLink = useMemo(() => (!sessionId ? '' : `${origin}/player_session/${sessionId}`), [sessionId, origin]);
 
   const copyToClipboard = async () => {
-    if (!sessionLink) return
+    if (!sessionLink) return;
     try {
-      await navigator.clipboard.writeText(sessionLink)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 1800)
+      await navigator.clipboard.writeText(sessionLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1800);
     } catch {
-      setErr('Falha ao copiar o link da sessão.')
+      setErr('Falha ao copiar o link da sessão.');
     }
-  }
+  };
 
   const applySession = useCallback((s: SessionWithUsers) => {
-    setSession(s)
-    setUsers(s.User ?? [])
-    setOptions(parseOptions(s.currentQuestion?.options))
-  }, [])
+    setSession(s);
+    setUsers(s.User ?? []);
+    setOptions(parseOptions(s.currentQuestion?.options));
+  }, []);
 
   const fetchSession = useCallback(async () => {
-    if (!sessionId) return
+    if (!sessionId) return;
     try {
-      setLoading(true)
-      setErr(null)
-      const s = await http.get<SessionWithUsers>(`/session/${sessionId}`)
-      applySession(s)
+      setLoading(true);
+      setErr(null);
+      const s = await http.get<SessionWithUsers>(`/session/${sessionId}`);
+      applySession(s);
     } catch {
       setErr('Não foi possível carregar a sessão.');
       localStorage.clear();
       router.push('/');
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [sessionId, applySession, router])
-
-
+  }, [sessionId, applySession, router]);
 
   const goToNextPhase = useCallback(async () => {
-    if (!sessionId || !session) return
-    if (advancingRef.current) return
-    advancingRef.current = true
+    if (!sessionId || !session) return;
+    if (advancingRef.current) return;
+    advancingRef.current = true;
 
     try {
-      const nextPhase = getNextPhase(session)
+      const nextPhase = getNextPhase(session);
       const payload = {
         phase: nextPhase.phase,
         currentQuestionIndex: nextPhase?.currentQuestionIndex,
         questions: nextPhase?.questions,
-      }
+      };
 
-      const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload)
-      applySession(updated)
-      sockRef.current?.sendPhaseChange(updated.phase)
+      const updated = await http.put<SessionWithUsers>(`/session/${sessionId}`, payload);
+      applySession(updated);
+      sockRef.current?.sendPhaseChange?.(updated.phase);
 
       if (isQuizResults(updated.phase) || isTermoResults(updated.phase) || isFinalPhase(updated.phase)) {
-        fetchSession()
+        fetchSession();
       }
     } catch {
-      setErr('Falha ao avançar de fase. Tente novamente.')
+      setErr('Falha ao avançar de fase. Tente novamente.');
     } finally {
-      advancingRef.current = false
+      advancingRef.current = false;
     }
-  }, [sessionId, session, applySession, fetchSession])
+  }, [sessionId, session, applySession, fetchSession]);
 
   useEffect(() => {
-    fetchSession()
-  }, [fetchSession])
+    fetchSession();
+  }, [fetchSession]);
 
-
-
-
+  // WebSocket
   useEffect(() => {
     if (sockRef.current) return;
 
@@ -137,48 +136,72 @@ export default function HostHome() {
 
     sockRef.current = sock;
     return () => sockRef.current?.close();
-  }, [fetchSession, sessionId])
+  }, [fetchSession, sessionId]);
 
-  // Timer do QUIZ (somente na fase ANSWERING)
+  // Timer do QUIZ (somente ANSWERING)
   useEffect(() => {
-    if (!session) return
+    if (!session) return;
 
     if (isQuizAnswering(session.phase)) {
-      const initial = session.currentQuestion?.timeLimit ?? 0
-      setTimeLeft(initial)
+      const initial = session.currentQuestion?.timeLimit ?? 0;
+      setQuizTimeLeft(initial);
 
-      let tick = initial
+      let tick = initial;
       const interval = setInterval(() => {
-        tick -= 1
-        setTimeLeft(tick)
+        tick -= 1;
+        setQuizTimeLeft(tick);
         if (tick <= 0) {
           clearInterval(interval);
           goToNextPhase();
         }
-      }, 1000)
+      }, 1000);
 
-      return () => clearInterval(interval)
+      return () => clearInterval(interval);
     } else {
-      setTimeLeft(null)
+      setQuizTimeLeft(null);
     }
-  }, [session?.phase, session?.currentQuestion?.id, session, goToNextPhase])
+  }, [session?.phase, session?.currentQuestion?.id, session, goToNextPhase]);
+
+
+  useEffect(() => {
+    if (!session) return;
+
+    if (isTermoAnswering(session.phase)) {
+      const initial = 120; // 2 min
+      setTermoTimeLeft(initial);
+
+      let tick = initial;
+      const interval = setInterval(() => {
+        tick -= 1;
+        setTermoTimeLeft(tick);
+        if (tick <= 0) {
+          clearInterval(interval);
+          goToNextPhase();
+        }
+      }, 1000);
+
+      return () => clearInterval(interval);
+    } else {
+      setTermoTimeLeft(null);
+    }
+  }, [session?.phase, session, goToNextPhase]);
 
   const quizStatus = () => {
-    if (!session) return null
+    if (!session) return null;
 
-    if (isQuizPreparing(session.phase)) return null
+    if (isQuizPreparing(session.phase)) return null;
 
     if (isQuizAnswering(session.phase)) {
-      if (timeLeft !== null && timeLeft > 0) {
+      if (quizTimeLeft !== null && quizTimeLeft > 0) {
         return (
           <div className="mt-3 text-center">
             <div className="inline-flex items-center gap-2 rounded-2xl bg-rose-100 text-rose-700 px-3 py-2">
               <span className="h-2.5 w-2.5 rounded-full bg-rose-500 animate-pulse" />
-              <p className="text-base font-extrabold">{timeLeft}s</p>
+              <p className="text-base font-extrabold">{quizTimeLeft}s</p>
             </div>
             <p className="text-xs text-slate-500 mt-1">Tempo restante</p>
           </div>
-        )
+        );
       }
       return (
         <div className="mt-3 text-center">
@@ -186,31 +209,66 @@ export default function HostHome() {
             ⏰ Tempo esgotado!
           </p>
         </div>
-      )
+      );
     }
 
     if (isQuizResults(session.phase)) {
-      const idx = session.currentQuestion?.correctIndex ?? -1
-      const ans = idx >= 0 ? options[idx] : undefined
+      const idx = session.currentQuestion?.correctIndex ?? -1;
+      const ans = idx >= 0 ? options[idx] : undefined;
       return (
         <p className="mt-3 text-center">
           <span className="inline-flex items-center rounded-2xl bg-emerald-100 text-emerald-700 px-3 py-2 text-sm font-semibold">
             ✅ Resposta: {ans || '—'}
           </span>
         </p>
-      )
+      );
     }
 
-    return null
-  }
+    return null;
+  };
 
-  // Mensagem para TERMO (cada player tem palavra diferente)
+  // Aviso do TERMO + timer de 2min
   const termoAnsweringNotice = (
-    <div className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800">
-      Rodada do <strong>TERMO</strong> em andamento. Cada participante recebeu uma palavra diferente —
-      acompanhe o tempo e o placar; acertos rápidos rendem mais pontos.
+    <div className="mt-3">
+      <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 text-sm text-sky-800 text-center">
+        <p className="font-semibold">TERMO — Rodada em andamento…</p>
+        <p className="text-slate-600">
+          Cada participante recebeu uma palavra diferente. Acertos rápidos valem mais pontos!
+        </p>
+
+        {/* Timer TERMO 2min */}
+        <div className="mt-3 flex flex-col items-center">
+          {termoTimeLeft !== null && termoTimeLeft > 0 ? (
+            <>
+              <p className="text-3xl font-extrabold text-sky-700 leading-none">{termoTimeLeft}s</p>
+              <div className="mt-2 h-2 w-full max-w-md rounded bg-slate-200 overflow-hidden">
+                <div
+                  className="h-2 bg-sky-400 transition-[width] duration-1000"
+                  style={{ width: `${((termoTimeLeft ?? 0) / 120) * 100}%` }}
+                />
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Tempo restante</p>
+            </>
+          ) : (
+            <p className="text-sm font-bold text-amber-700">⏰ Encerrando…</p>
+          )}
+        </div>
+      </div>
     </div>
-  )
+  );
+
+  // WS: emitir evento reveal_gender para sincronizar players
+  const emitRevealGender = useCallback(() => {
+    const payload = { type: 'reveal_gender', sessionId, userId: '0' };
+    // Tenta helpers conhecidos do seu cliente:
+    // @ts-expect-error métodos opcionais
+    if (sockRef.current?.sendCustom) sockRef.current.sendCustom(payload);
+    // @ts-expect-error métodos opcionais
+    else if (sockRef.current?.sendJson) sockRef.current.sendJson(payload);
+    // @ts-expect-error acesso raw opcional
+    else sockRef.current?.socket?.send?.(JSON.stringify(payload));
+    console.log('[ws] reveal_gender emitido');
+  }, [sessionId]);
 
   return (
     <AppShellKids>
@@ -225,7 +283,6 @@ export default function HostHome() {
         </div>
       </header>
 
-      {/* Alert de erro (tema claro) */}
       {err && (
         <div className="mt-4 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-800">
           {err}
@@ -235,7 +292,7 @@ export default function HostHome() {
       {/* Card principal */}
       <section className="mt-6 rounded-3xl border border-white/80 bg-white/80 backdrop-blur-md shadow-xl">
         {loading ? (
-         <Loading/>
+        <Loading/>
         ) : !session ? (
           <div className="p-8">Sessão não encontrada.</div>
         ) : (
@@ -251,15 +308,16 @@ export default function HostHome() {
               />
             ) : (
               <>
-                {/* status badge (seu componente atual) */}
                 <div className="mb-3">
                   <StatusBadge phase={session.phase} />
                 </div>
 
-                {/* Conteúdo de QUIZ */}
+                {/* QUIZ */}
                 {session.phase.includes('QUIZ') ? (
                   <>
-                    <h2 className="text-2xl font-bold mb-3">{session.currentQuestion?.text || '—'}</h2>
+                    <h2 className="text-2xl font-bold mb-3 text-slate-800">
+                      {session.currentQuestion?.text || '—'}
+                    </h2>
 
                     {!isQuizPreparing(session.phase) && (
                       <div className="space-y-3">
@@ -268,7 +326,7 @@ export default function HostHome() {
                             key={`${i}-${opt}`}
                             className="rounded-2xl border border-slate-200 bg-white px-4 py-3"
                           >
-                            <p className="font-medium">
+                            <p className="font-medium text-slate-800">
                               {i + 1}) <span className="font-semibold">{opt}</span>
                             </p>
                           </div>
@@ -281,11 +339,11 @@ export default function HostHome() {
                     {(isQuizResults(session.phase) || isFinalPhase(session.phase)) && (
                       <>
                         {isFinalPhase(session.phase) ? (
-                          <div className="mt-6">
+                          <div className="mt-6 flex justify-center">
                             <Scoreboard title="Placar final" session={session} />
                           </div>
                         ) : (
-                          <div className="mt-6">
+                          <div className="mt-6 flex justify-center">
                             <Scoreboard title="Parcial geral" session={session} />
                           </div>
                         )}
@@ -293,25 +351,27 @@ export default function HostHome() {
                     )}
                   </>
                 ) : (
-                  /* Conteúdo de TERMO */
+                  /* TERMO */
                   <>
-                    {isTermoPreparing(session.phase) && <TermoExplanation />}
+                    {isTermoPreparing(session.phase) && (
+                      <div className="flex justify-center">
+                        <TermoExplanation />
+                      </div>
+                    )}
 
                     {isTermoAnswering(session.phase) && termoAnsweringNotice}
 
                     {(isTermoResults(session.phase) || isFinalPhase(session.phase)) && (
-                      <>
+                      <div className="w-full flex flex-col items-center">
                         {isFinalPhase(session.phase) ? (
-                          <div className="mt-12">
-                            <FinalRevelation isHost={true}/>
+                          <>
+                            <FinalRevelation isHost onReveal={emitRevealGender} />
                             <Scoreboard title="Placar final" session={session} />
-                          </div>
+                          </>
                         ) : (
-                          <div className="mt-12">
-                            <Scoreboard title="Parcial geral" session={session} />
-                          </div>
+                          <Scoreboard title="Parcial geral" session={session} />
                         )}
-                      </>
+                      </div>
                     )}
                   </>
                 )}
@@ -323,9 +383,11 @@ export default function HostHome() {
                     {isTermoResults(session.phase) && 'Resultado da rodada exibido.'}
                     {isFinalPhase(session.phase) && 'Jogo encerrado.'}
                   </div>
-                 {!isFinalPhase(session.phase) && <SparkleButton onClick={goToNextPhase} disabled={advancingRef.current}>
-                    {advancingRef.current ? 'Avançando…' : 'Avançar'}
-                  </SparkleButton>}
+                  {!isFinalPhase(session.phase) && (
+                    <SparkleButton onClick={goToNextPhase} disabled={advancingRef.current}>
+                      {advancingRef.current ? 'Avançando…' : 'Avançar'}
+                    </SparkleButton>
+                  )}
                 </div>
               </>
             )}
@@ -333,5 +395,5 @@ export default function HostHome() {
         )}
       </section>
     </AppShellKids>
-  )
+  );
 }
