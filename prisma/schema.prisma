@@ -7,6 +7,11 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Gender {
+  id           String    @id @default(uuid())
+  genderBase64 String
+}
+
 model User {
   id         String       @id @default(uuid())
   name       String
