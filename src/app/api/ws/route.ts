@@ -1,5 +1,6 @@
-// app/api/ws/route.ts (ou onde você exporta o handler do next-ws)
 import type { WebSocket } from 'ws';
+export const runtime = 'nodejs';
+
 
 // Mensagens tipadas (resumo)
 type Role = 'host' | 'player';
