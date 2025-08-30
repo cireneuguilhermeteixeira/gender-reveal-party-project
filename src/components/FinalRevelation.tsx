@@ -8,28 +8,28 @@ type FinalRevelationProps = {
 }
 
 function FinalRevelation({ isHost, onReveal, gender }: FinalRevelationProps) {
-
     const [revealStarted, setRevealStarted] = useState(false);
     const [revealCountdown, setRevealCountdown] = useState(10);
     const revealSteps = [
-        'Coletando pistas…',
-        'Analisando palpites…',
-        'Conferindo evidências…',
-        'Decifrando o enigma…',
-        'Preparando a revelação…',
+        "Coletando pistas…",
+        "Analisando palpites…",
+        "Conferindo evidências…",
+        "Decifrando o enigma…",
+        "Preparando a revelação…",
     ];
+
     const stepIndex = useMemo(
-    () => Math.min(revealSteps.length - 1, Math.floor((10 - revealCountdown) / 2)),
-    [revealCountdown, revealSteps.length]
-    )
+        () => Math.min(revealSteps.length - 1, Math.floor((10 - revealCountdown) / 2)),
+        [revealCountdown, revealSteps.length]
+    );
 
     // Contagem da revelação final
     useEffect(() => {
-    if (!revealStarted) return
-    if (revealCountdown <= 0) return
-    const id = setInterval(() => setRevealCountdown(v => v - 1), 1000)
-    return () => clearInterval(id)
-    }, [revealStarted, revealCountdown])
+        if (!revealStarted) return;
+        if (revealCountdown <= 0) return;
+        const id = setInterval(() => setRevealCountdown((v) => v - 1), 1000);
+        return () => clearInterval(id);
+    }, [revealStarted, revealCountdown]);
 
     const revealSecret = () => {
         setRevealStarted(true);
@@ -39,7 +39,7 @@ function FinalRevelation({ isHost, onReveal, gender }: FinalRevelationProps) {
     }
 
     return (
-      <section className="w-full max-w-2xl mt-6 rounded-3xl border border-sky-200 bg-sky-50 p-5 text-center shadow">
+      <section className="w-full max-w-2xl mt-6 rounded-3xl border border-emerald-200 bg-emerald-50 p-5 text-center shadow">
         {!revealStarted ? (
             <>
             <p className="text-slate-700">
@@ -49,9 +49,7 @@ function FinalRevelation({ isHost, onReveal, gender }: FinalRevelationProps) {
                 Iniciaremos a contagem para revelar o segredo!
             </p>
             <div className="mt-4">
-               {isHost && <SparkleButton onClick={revealSecret}>
-                Revelar segredo
-                </SparkleButton>}
+                {isHost && <SparkleButton onClick={revealSecret}>Revelar segredo</SparkleButton>}
             </div>
             </>
         ) : revealCountdown > 0 ? (
@@ -60,26 +58,23 @@ function FinalRevelation({ isHost, onReveal, gender }: FinalRevelationProps) {
             <p className="text-slate-700 mt-2">{revealSteps[stepIndex]}</p>
             <div className="mt-3 h-2 w-full rounded bg-slate-200 overflow-hidden">
                 <div
-                className="h-2 bg-sky-400 transition-[width] duration-1000"
+                className="h-2 bg-emerald-400 transition-[width] duration-1000"
                 style={{ width: `${((10 - revealCountdown) / 10) * 100}%` }}
                 />
             </div>
             </>
         ) : (
             <>
-            {/* Anúncio — escolha de cores por gênero */}
-            {gender === 'boy' ? (
-                <div className="rounded-3xl border-2 border-sky-300 bg-sky-50 p-6">
-                <p className="text-4xl md:text-5xl font-black text-sky-600">É um MENINO! 🩵🎉</p>
+              {gender === 'boy' ? (
+                <div className="rounded-3xl border-2 border-emerald-300 bg-emerald-50 p-6">
+                <p className="text-4xl md:text-5xl font-black text-emerald-600">É um MENINO! 💚🎉</p>
                 <p className="mt-2 text-slate-700">Parabéns! Obrigado por brincar com a gente.</p>
                 </div>
             ) : (
-                // Versão menina (deixe comentada para trocar facilmente)
-                <div className="rounded-3xl border-2 border-rose-300 bg-rose-50 p-6">
-                  <p className="text-4xl md:text-5xl font-black text-rose-600">É uma MENINA! 💗🎉</p>
-                  <p className="mt-2 text-slate-700">Parabéns! Obrigado por brincar com a gente.</p>
+                <div className="rounded-3xl border-2 border-violet-300 bg-violet-50 p-6">
+                <p className="text-4xl md:text-5xl font-black text-violet-600">É uma MENINA! 💜🎉</p>
+                <p className="mt-2 text-slate-700">Parabéns! Obrigado por brincar com a gente.</p>
                 </div>
-                
             )}
             </>
         )}
