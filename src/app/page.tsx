@@ -74,7 +74,7 @@ export default function Home() {
           </h2>
 
           <p className="mt-4 text-slate-700 max-w-prose">
-            São <strong>10 pistas</strong> (quiz) + <strong>3 codenomes</strong> (termo) para
+            São <strong>8 pistas</strong> (quiz) + <strong>3 codenomes</strong> (termo) para
             destravar o cofre e descobrir <em>quem está chegando</em>.
           </p>
 
@@ -88,7 +88,7 @@ export default function Home() {
           <ul className="mt-8 grid grid-cols-1 sm:grid-cols-3 gap-4">
             <FeatureCard
               emoji="🔎"
-              title="10 Pistas"
+              title="8 Pistas"
               desc="Perguntas rápidas que viram evidências no quadro."
               accent="rose"
             />

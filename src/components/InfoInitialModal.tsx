@@ -75,7 +75,7 @@ function InfoInitialModal({
           <h3 className="mt-4 font-bold">Como funciona</h3>
           <ul className="mt-2 list-disc pl-5 space-y-2">
             <li>
-              <strong>10 Pistas (quiz)</strong>: cada pergunta autentica uma evidência no{' '}
+              <strong>8 Pistas (quiz)</strong>: cada pergunta autentica uma evidência no{' '}
               <em>Quadro de Evidências</em> (seu placar). Cada pergunta é um “trabalho de detetive” diferente.
             </li>
             <li>
@@ -83,7 +83,7 @@ function InfoInitialModal({
               (ex.: <em>fralda</em>, <em>colo</em>, <em>ninar</em>). Decifrar as três palavras fornece a combinação do cofre que guarda a revelação. Sem o código, o mandado não executa. Com ele, o Chefe de Investigação pode girar a fechadura.
             </li>
             <li>
-              Juntando <strong>10 evidências</strong> + <strong>3 selos</strong>, o cofre pode ser
+              Juntando <strong>8 evidências</strong> + <strong>3 selos</strong>, o cofre pode ser
               aberto e a <strong>revelação</strong> acontece.
             </li>
           </ul>

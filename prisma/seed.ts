@@ -3,84 +3,68 @@ import { PrismaClient } from '@prisma/client'
 const prisma = new PrismaClient()
 
 async function main() {
-  // limpar dados antigos (opcional)
+
   await prisma.question.deleteMany()
 
   await prisma.question.createMany({
     data: [
       {
-        text: "Qual é a capital da França?",
-        options: JSON.stringify(["Londres", "Paris", "Roma", "Berlim"]),
+        text: "Qual a nossa cidade natal?",
+        options: JSON.stringify(["Ambos de Fortaleza", "Sobral e Caucaia", "Santana do Acaraú e Caucaia", "Sobral e Paraipaba"]),
         correctIndex: 1,
         timeLimit: 15,
       },
       {
-        text: "Quanto é 7 x 8?",
-        options: JSON.stringify(["54", "56", "64", "72"]),
-        correctIndex: 1,
-        timeLimit: 10,
-      },
-      {
-        text: "Quem escreveu 'Dom Quixote'?",
-        options: JSON.stringify([
-          "Machado de Assis",
-          "Miguel de Cervantes",
-          "José Saramago",
-          "Eça de Queirós",
-        ]),
-        correctIndex: 1,
-        timeLimit: 20,
-      },
-      {
-        text: "Em que ano o homem pisou na Lua pela primeira vez?",
-        options: JSON.stringify(["1965", "1969", "1971", "1973"]),
-        correctIndex: 1,
-        timeLimit: 20,
-      },
-      {
-        text: "Qual é o maior planeta do Sistema Solar?",
-        options: JSON.stringify(["Terra", "Saturno", "Júpiter", "Netuno"]),
-        correctIndex: 2, // Júpiter
+        text: "Onde ou por onde nos conhecemos?",
+        options: JSON.stringify(["Tinder", "Instagram", "Igreja", "Na praia"]),
+        correctIndex: 0,
         timeLimit: 15,
       },
       {
-        text: "Quem pintou a Mona Lisa?",
+        text: "Em Agosto de 2025, quantos anos de namoro fizemos?",
         options: JSON.stringify([
-          "Michelangelo",
-          "Leonardo da Vinci",
-          "Van Gogh",
-          "Pablo Picasso",
+          "4",
+          "6",
+          "5",
+          "3",
         ]),
-        correctIndex: 1, // Leonardo da Vinci
+        correctIndex: 2,
         timeLimit: 15,
       },
       {
-        text: "Qual é o elemento químico representado pela letra 'O'?",
-        options: JSON.stringify(["Ouro", "Oxigênio", "Ósmio", "Ozônio"]),
-        correctIndex: 1, // Oxigênio
-        timeLimit: 10,
+        text: "Qual a comida nós estranhamente não gostamos?",
+        options: JSON.stringify(["Amendoim e beterraba", "Açaí e sushi", "Beringela e Miojo", "Suco de goiaba e repolho"]),
+        correctIndex: 0,
+        timeLimit: 15,
       },
       {
-        text: "Em que continente fica o Egito?",
-        options: JSON.stringify(["África", "Ásia", "Europa", "América"]),
-        correctIndex: 0, // África
-        timeLimit: 10,
+        text: "Qual foi o nosso primeiro emprego formal/informal?",
+        options: JSON.stringify(["Aula particular e vendedora de seguros", "Técnico de Computadores e vendedora de plano de internet", "Programador e Recursos Humanos", "Entregador de Panfletos e Gerente de Locadora de Video Game"]),
+        correctIndex: 3,
+        timeLimit: 15,
       },
       {
-        text: "Quem foi o primeiro presidente do Brasil?",
+        text: "Onde foi o local que há grandes indícios do bebê ter sido gerado?",
         options: JSON.stringify([
-          "Getúlio Vargas",
-          "Deodoro da Fonseca",
-          "Floriano Peixoto",
-          "Dom Pedro II",
+          "Fortaleza",
+          "Barreirinhas",
+          "Caucaia",
+          "Paraipaba",
         ]),
-        correctIndex: 1, // Deodoro da Fonseca
-        timeLimit: 20,
+        correctIndex: 1,
+        timeLimit: 15,
       },
       {
-        text: "Qual é a moeda oficial do Japão?",
-        options: JSON.stringify(["Yen", "Won", "Dólar", "Peso"]),
-        correctIndex: 0, // Yen
+        text: "Qual foi o primeiro presente que nosso(a) bebê ganhou?",
+        options: JSON.stringify(["Par de meia", "Macacão", "Bolsa Canguru", "RTX 4090"]),
+        correctIndex: 0,
+        timeLimit: 15,
+      },
+      
+      {
+        text: "Qual o nome das nossas filhas adotivas?",
+        options: JSON.stringify(["Mel e Lua", "Solange e Estrela", "Sol e Lua", "Sol e Estrela"]),
+        correctIndex: 2,
         timeLimit: 15,
       },
     ],

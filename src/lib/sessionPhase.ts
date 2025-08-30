@@ -1,6 +1,6 @@
 import { Phase, Prisma, Question, Session } from "@prisma/client";
 
-const QUIZ_PHASES_SIZE = 10;
+const QUIZ_PHASES_SIZE = 8;
 
 type QuestionJson = Question & { current?: boolean };
 type SessionState = { phase: Phase; questions: QuestionJson[], currentQuestionIndex: string };

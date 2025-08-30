@@ -5,7 +5,7 @@ import prisma from '@/lib/prisma';
 
 export async function POST() {
   const questions = await prisma.question.findMany({
-    take: 10
+    take: 8
   });
 
   if (!questions.length) {
