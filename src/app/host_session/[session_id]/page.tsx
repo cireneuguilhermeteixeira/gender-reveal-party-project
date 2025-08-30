@@ -125,11 +125,9 @@ export default function HostHome() {
       .on('error', (e) => console.warn('[ws] error', e))
       .on('welcome', ({ room }) => console.log('[ws] welcome snapshot', room))
       .on('user_joined', ({ user }) => {
-        fetchSession();
         console.log('[ws] joined', user);
       })
       .on('user_left', ({ userId }) => {
-        fetchSession();
         console.log('[ws] left', userId);
       })
       .on('phase_changed', ({ phase }) => console.log('[ws] phase ->', phase))
