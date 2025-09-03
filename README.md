@@ -91,6 +91,6 @@ npm start               # Runs node server.mjs in production mode
 - Termo Host Page
 <img width="902" height="610" alt="image" src="https://github.com/user-attachments/assets/02a7a0b3-2d20-40a5-8a4c-32de92b7e286" />
 - Termo Player Page
-<img width="206" height="449" alt="image" src="https://github.com/user-attachments/assets/40a6f655-5836-4a44-a7e8-407f924f06fe" />
+<img width="213" height="445" alt="image" src="https://github.com/user-attachments/assets/627afdf2-2777-40f1-b425-c553c57cea7c" />
 
 
