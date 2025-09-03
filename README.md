@@ -71,12 +71,26 @@ npm start               # Runs node server.mjs in production mode
 ```
 
 ## Screenshots
+- Landing page
+<img width="904" height="608" alt="image" src="https://github.com/user-attachments/assets/48bc60a1-4496-4151-a60c-18fd9fa84c3a" />
+<img width="903" height="606" alt="image" src="https://github.com/user-attachments/assets/efa6216f-2c03-4acf-8f22-3893e891e363" />
 
-<!--
-![Landing](docs/screenshot1.png)
-![Quiz Screen](docs/screenshot2.png)
-![Termo Screen](docs/screenshot3.png)
--->
+- Host initial room
+<img width="889" height="599" alt="image" src="https://github.com/user-attachments/assets/98bc9063-9ab5-4480-93c9-85cbe86ba61f" />
 
-(Replace the placeholders with actual images of the application.)
+
+- Player initial room
+<img width="944" height="603" alt="image" src="https://github.com/user-attachments/assets/a0fd54a3-6cff-42cd-beea-b957acc76833" />
+
+- Quiz Host Page 
+  <img width="915" height="613" alt="image" src="https://github.com/user-attachments/assets/6928c5e9-8024-4ba7-b7d6-52fb9103a059" />
+- Quiz Player Page
+<img width="280" height="510" alt="image" src="https://github.com/user-attachments/assets/0dde04d3-c897-4a77-a56c-bf88d71e6a9c" />
+
+
+- Termo Host Page
+<img width="902" height="610" alt="image" src="https://github.com/user-attachments/assets/02a7a0b3-2d20-40a5-8a4c-32de92b7e286" />
+- Termo Player Page
+<img width="206" height="449" alt="image" src="https://github.com/user-attachments/assets/40a6f655-5836-4a44-a7e8-407f924f06fe" />
+
 
